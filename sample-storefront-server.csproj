@@ -1,10 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>sample_storefront_server</RootNamespace>
+    <UserSecretsId>1438f390-ec59-4a52-ab56-99f36a3e5643</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

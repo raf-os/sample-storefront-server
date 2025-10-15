@@ -1,8 +1,33 @@
+using System.Text;
+using Microsoft.IdentityModel.Tokens;
+
 var builder = WebApplication.CreateBuilder(args);
+
+var JwtApiKey = builder.Configuration["Jwt:Key"];
+
+if (JwtApiKey == null)
+{
+    throw new Exception("Jwt key is null.");
+}
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+builder.Services.AddAuthentication().AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = "sampleStorefrontServer",
+            ValidAudience = "sampleStorefrontClient",
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtApiKey))
+        };
+    }
+);
 
 builder.Services.AddCors(options =>
 {
