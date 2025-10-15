@@ -1,6 +1,9 @@
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 
+using SampleStorefront.Context;
+using SampleStorefront.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 var JwtApiKey = builder.Configuration["Jwt:Key"];
@@ -10,9 +13,13 @@ if (JwtApiKey == null)
     throw new Exception("Jwt key is null.");
 }
 
+builder.Services.AddControllers();
+
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+builder.Services.AddDbContext<AppDbContext>();
 
 builder.Services.AddAuthentication().AddJwtBearer(options =>
     {
@@ -40,6 +47,9 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddScoped<PasswordService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -55,6 +65,11 @@ if (app.Environment.IsDevelopment())
 app.UseRouting();
 app.UseCors();
 app.UseHttpsRedirection();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
 
 app.Run();
 

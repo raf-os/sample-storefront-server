@@ -1,9 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "WikmXWf2vIk=",
+  "dgSpecHash": "2zcqU81fm5M=",
   "success": true,
   "projectFilePath": "/home/rafael/VS Projects/sample-storefront/sample-storefront-server/sample-storefront-server.csproj",
   "expectedPackageFiles": [
+    "/home/rafael/.nuget/packages/bcrypt.net-next/4.0.3/bcrypt.net-next.4.0.3.nupkg.sha512",
     "/home/rafael/.nuget/packages/microsoft.aspnetcore.authentication.jwtbearer/9.0.10/microsoft.aspnetcore.authentication.jwtbearer.9.0.10.nupkg.sha512",
     "/home/rafael/.nuget/packages/microsoft.aspnetcore.openapi/9.0.10/microsoft.aspnetcore.openapi.9.0.10.nupkg.sha512",
     "/home/rafael/.nuget/packages/microsoft.data.sqlite.core/9.0.10/microsoft.data.sqlite.core.9.0.10.nupkg.sha512",
