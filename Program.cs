@@ -17,7 +17,10 @@ builder.Services.AddControllers();
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+{
+    options.ShouldInclude = operation => operation.HttpMethod != null;
+});
 
 builder.Services.AddDbContext<AppDbContext>();
 

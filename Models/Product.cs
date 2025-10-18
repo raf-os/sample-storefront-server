@@ -1,4 +1,13 @@
+using Microsoft.EntityFrameworkCore;
+
 namespace SampleStorefront.Models;
+
+[Owned]
+public class ProductRating
+{
+    public float? Value;
+    public int Amount = 0;
+}
 
 public class Product
 {
@@ -8,7 +17,7 @@ public class Product
     public required float Price { get; set; }
     public float? Discount { get; set; }
     public string? Description { get; set; }
-    public int? Rating { get; set; }
+    public ProductRating Rating { get; set; } = new ProductRating();
 
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
@@ -44,7 +53,7 @@ public class ProductDTO
     public float Price { get; set; }
     public float? Discount { get; set; }
     public string? Description { get; set; }
-    public int? Rating { get; set; }
+    public ProductRating Rating { get; set; }
 
     public Guid UserId { get; set; }
     public UserDTO User { get; set; } = null!;
