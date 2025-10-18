@@ -53,7 +53,7 @@ public class ProductDTO
     public float Price { get; set; }
     public float? Discount { get; set; }
     public string? Description { get; set; }
-    public ProductRating Rating { get; set; }
+    public ProductRating Rating { get; set; } = null!;
 
     public Guid UserId { get; set; }
     public UserDTO User { get; set; } = null!;
