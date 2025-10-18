@@ -57,19 +57,25 @@ public class AuthController : ControllerBase
             return Unauthorized();
         }
 
-        var refreshToken = await GenerateRefreshToken(user.Id);
-
-        Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
+        try
         {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.None,
-            Expires = DateTime.UtcNow.AddDays(30)
-        });
+            var refreshToken = await GenerateRefreshToken(user.Id);
 
-        var token = _jwtTokenService.GenerateToken(user.Id.ToString(), username);
+            Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                Expires = DateTime.UtcNow.AddDays(30)
+            });
 
-        return Ok(new { token, refreshToken });
+            var token = _jwtTokenService.GenerateToken(user);
+            return Ok(new { token, refreshToken });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500);
+        }
     }
 
     [HttpPost("refresh")]
@@ -95,7 +101,7 @@ public class AuthController : ControllerBase
             return Unauthorized();
         }
 
-        var newToken = _jwtTokenService.GenerateToken(user.Id.ToString(), user.Name);
+        var newToken = _jwtTokenService.GenerateToken(user);
 
         return Ok(new { token = newToken });
     }
@@ -137,6 +143,6 @@ public class AuthController : ControllerBase
             return StatusCode(500);
         }
 
-        return Ok();
+        return Created();
     }
 }

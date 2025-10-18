@@ -62,6 +62,8 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseExceptionHandler("/error");
+
 app.UseRouting();
 app.UseCors();
 app.UseHttpsRedirection();
