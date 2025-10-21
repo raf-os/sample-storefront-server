@@ -26,6 +26,7 @@ public class ProductController : ControllerBase
     public async Task<IActionResult> FetchPage([Range(0, int.MaxValue)] int offset = 0)
     {
         var totalCount = await _db.Products.CountAsync();
+        var totalPages = MathF.Ceiling((float)totalCount / (float)_pageSize);
         var query = await _db.Products
             .OrderBy(x => x.CreationDate)
             .Skip(offset * _pageSize)
@@ -36,7 +37,7 @@ public class ProductController : ControllerBase
                 CommentCount = x.Comments.Count()
             })
             .ToListAsync();
-        return Ok(new { items = query, totalCount });
+        return Ok(new { items = query, totalPages });
     }
 
     [HttpGet("item/{id}")]

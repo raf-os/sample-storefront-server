@@ -25,10 +25,16 @@ public class CommentController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> FetchComments(Guid Id, [Range(0, int.MaxValue)] int Page = 0)
     {
+        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+
         var query = _db.Comments
             .Where(x => x.ProductId == Id);
 
         var totalCount = await query.CountAsync();
+        var totalPages = MathF.Ceiling((float)totalCount / (float)_pageSize);
+        bool hasCommented = userId == null
+            ? false
+            : await query.AnyAsync(c => c.UserId.ToString() == userId);
 
         var comments = await query
             .OrderBy(x => x.PostDate)
@@ -40,7 +46,7 @@ public class CommentController : ControllerBase
         if (comments == null)
             return NotFound();
 
-        return Ok(new { comments, totalCount });
+        return Ok(new { comments, totalPages, hasCommented });
     }
 
     [Authorize]
