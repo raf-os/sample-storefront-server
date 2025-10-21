@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.EntityFrameworkCore;
 using SampleStorefront.Context;
 using SampleStorefront.Models;
@@ -95,5 +96,39 @@ public class ProductController : ControllerBase
         await _db.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    [Authorize]
+    [HttpPatch("{id}")]
+    public async Task<IActionResult> UpdateItem(Guid Id, [FromBody] JsonPatchDocument<ProductPatchDTO> patchItem)
+    {
+        if (patchItem == null)
+        {
+            return BadRequest();
+        }
+
+        var productToPatch = await _db.Products.Where(p => p.Id == Id).SingleOrDefaultAsync();
+
+        if (productToPatch == null)
+            return NotFound();
+
+        var dto = new ProductPatchDTO(productToPatch);
+
+        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)!;
+
+        if (productToPatch.UserId.ToString() != userId)
+            return Unauthorized();
+
+        patchItem.ApplyTo(dto, ModelState);
+
+        if (!ModelState.IsValid)
+            return BadRequest();
+
+        if (dto.Name != null) productToPatch.Name = dto.Name;
+        if (dto.Price.HasValue) productToPatch.Price = dto.Price.Value;
+        if (dto.Discount.HasValue) productToPatch.Discount = dto.Discount.Value;
+        if (dto.Description != null) productToPatch.Description = dto.Description;
+
+        return Ok(dto);
     }
 }

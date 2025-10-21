@@ -6,14 +6,9 @@ using SampleStorefront.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var JwtApiKey = builder.Configuration["Jwt:Key"];
+var JwtApiKey = builder.Configuration["Jwt:Key"] ?? throw new Exception("Jwt key is null.");
 
-if (JwtApiKey == null)
-{
-    throw new Exception("Jwt key is null.");
-}
-
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddNewtonsoftJson();
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
