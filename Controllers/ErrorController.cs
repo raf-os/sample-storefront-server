@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
+namespace SampleStorefront.Controllers;
+
 [ApiController]
 public class ErrorController : ControllerBase
 {

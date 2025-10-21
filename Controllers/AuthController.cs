@@ -4,6 +4,8 @@ using SampleStorefront.Context;
 using SampleStorefront.Models;
 using SampleStorefront.Services;
 
+namespace SampleStorefront.Controllers;
+
 [ApiController]
 [Route("auth/[controller]")]
 public class AuthController : ControllerBase
@@ -70,7 +72,7 @@ public class AuthController : ControllerBase
             });
 
             var token = _jwtTokenService.GenerateToken(user);
-            return Ok(new { token, refreshToken });
+            return Ok(new { token, refreshToken, user.Name, UserId = user.Id });
         }
         catch (Exception)
         {
@@ -103,7 +105,7 @@ public class AuthController : ControllerBase
 
         var newToken = _jwtTokenService.GenerateToken(user);
 
-        return Ok(new { token = newToken });
+        return Ok(new { token = newToken, user.Name, UserId = user.Id });
     }
 
     [HttpPost("register")]

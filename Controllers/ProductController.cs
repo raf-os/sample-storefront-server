@@ -8,8 +8,10 @@ using Microsoft.EntityFrameworkCore;
 using SampleStorefront.Context;
 using SampleStorefront.Models;
 
+namespace SampleStorefront.Controllers;
+
 [ApiController]
-[Route("api/products/[controller]")]
+[Route("api/product")]
 public class ProductController : ControllerBase
 {
     public record NewProductRequest(string Name, float Price, string? Description);
@@ -23,16 +25,21 @@ public class ProductController : ControllerBase
     [HttpGet("page")]
     public async Task<IActionResult> FetchPage([Range(0, int.MaxValue)] int offset = 0)
     {
-        var items = await _db.Products
+        var totalCount = await _db.Products.CountAsync();
+        var query = await _db.Products
             .OrderBy(x => x.CreationDate)
             .Skip(offset * _pageSize)
             .Take(_pageSize)
-            .Select(i => new ProductListItemDTO(i))
+            .Select(x => new
+            {
+                Product = new ProductListItemDTO(x),
+                CommentCount = x.Comments.Count()
+            })
             .ToListAsync();
-        return Ok(items);
+        return Ok(new { items = query, totalCount });
     }
 
-    [HttpGet("item")]
+    [HttpGet("item/{id}")]
     public async Task<IActionResult> FetchItem(Guid id)
     {
         var item = await _db.Products
@@ -74,7 +81,7 @@ public class ProductController : ControllerBase
     }
 
     [Authorize]
-    [HttpDelete("item")]
+    [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteItem(Guid id)
     {
         var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)!;
@@ -128,6 +135,8 @@ public class ProductController : ControllerBase
         if (dto.Price.HasValue) productToPatch.Price = dto.Price.Value;
         if (dto.Discount.HasValue) productToPatch.Discount = dto.Discount.Value;
         if (dto.Description != null) productToPatch.Description = dto.Description;
+
+        await _db.SaveChangesAsync();
 
         return Ok(dto);
     }
