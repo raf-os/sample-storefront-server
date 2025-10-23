@@ -10,7 +10,7 @@ using SampleStorefront.Models;
 namespace SampleStorefront.Controllers;
 
 [ApiController]
-[Route("api/product/comments")]
+[Route("api/product/[controller]")]
 public class CommentController : ControllerBase
 {
     private readonly int _pageSize = 6;

@@ -11,7 +11,7 @@ using SampleStorefront.Models;
 namespace SampleStorefront.Controllers;
 
 [ApiController]
-[Route("api/product")]
+[Route("api/[controller]")]
 public class ProductController : ControllerBase
 {
     public record NewProductRequest(string Name, float Price, string? Description);
