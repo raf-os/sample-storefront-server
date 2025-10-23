@@ -7,7 +7,7 @@ using SampleStorefront.Services;
 namespace SampleStorefront.Controllers;
 
 [ApiController]
-[Route("auth/[controller]")]
+[Route("[controller]")]
 public class AuthController : ControllerBase
 {
     private readonly AppDbContext _db;
