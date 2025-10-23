@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.IdentityModel.Tokens;
 
 using SampleStorefront.Context;
+using SampleStorefront.Models;
 using SampleStorefront.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,6 +34,11 @@ builder.Services.AddAuthentication().AddJwtBearer(options =>
         };
     }
 );
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("ModOnly",
+        policy => policy.RequireRole(nameof(UserRole.Operator), nameof(UserRole.Admin)));
+});
 
 builder.Services.AddCors(options =>
 {

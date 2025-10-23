@@ -22,6 +22,29 @@ public class CommentController : ControllerBase
         _db = db;
     }
 
+    public async Task<bool> UpdateScore(Product product)
+    {
+        var query = await _db.Comments
+            .Where(c => c.ProductId == product.Id)
+            .GroupBy(c => c.ProductId)
+            .Select(x => new
+            {
+                AverageScore = x.Average(c => c.Score),
+                Count = x.Count()
+            })
+            .FirstOrDefaultAsync();
+        
+        if (query == null)
+            return false;
+
+        var score = new ProductRating { Amount = query.Count, Value = query.AverageScore };
+
+        product.Rating = score;
+        await _db.SaveChangesAsync();
+
+        return true;
+    }
+
     [HttpGet("{id}")]
     public async Task<IActionResult> FetchComments(Guid Id, [Range(0, int.MaxValue)] int Page = 0)
     {
@@ -77,6 +100,8 @@ public class CommentController : ControllerBase
 
         await _db.SaveChangesAsync();
 
+        await UpdateScore(product);
+
         return Created();
     }
 
@@ -89,6 +114,8 @@ public class CommentController : ControllerBase
         if (comment == null)
             return NotFound();
 
+        var pId = comment.ProductId;
+
         var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)!;
 
         if (comment.UserId.ToString() != userId)
@@ -97,6 +124,10 @@ public class CommentController : ControllerBase
         _db.Remove(comment);
 
         await _db.SaveChangesAsync();
+
+        var product = await _db.Products.Where(p => p.Id == pId).FirstOrDefaultAsync();
+        if (product != null)
+            await UpdateScore(product);
 
         return NoContent();
     }

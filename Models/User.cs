@@ -13,6 +13,7 @@ public class User
     public required string Name { get; set; }
     public required string Password { get; set; }
     public required string Email { get; set; }
+    public DateTime SignupDate { get; set; } = DateTime.UtcNow;
     public bool IsVerified { get; set; } = false;
     public UserRole Role { get; set; } = UserRole.User;
 
@@ -26,6 +27,8 @@ public class UserDTO
     public string Name { get; set; } = default!;
     public string Email { get; set; } = default!;
     public UserRole Role { get; set; }
+    public DateTime SignupDate { get; set; }
+    public bool IsVerified { get; set; }
 
     public List<CommentDTO>? Comments { get; set; }
     public List<ProductDTO>? Products { get; set; }
@@ -36,6 +39,10 @@ public class UserDTO
         Id = user.Id;
         Name = user.Name;
         Email = user.Email;
+
+        SignupDate = user.SignupDate;
+        IsVerified = user.IsVerified;
+
         Role = user.Role;
 
         if (user.Comments != null)
