@@ -72,7 +72,7 @@ public class AuthController : ControllerBase
             });
 
             var token = _jwtTokenService.GenerateToken(user);
-            return Ok(new { token, user.Name, UserId = user.Id });
+            return Ok(token);
         }
         catch (Exception)
         {
@@ -103,9 +103,9 @@ public class AuthController : ControllerBase
             return Unauthorized();
         }
 
-        var newToken = _jwtTokenService.GenerateToken(user);
+        var token = _jwtTokenService.GenerateToken(user);
 
-        return Ok(new { token = newToken, user.Name, UserId = user.Id });
+        return Ok(token);
     }
 
     [HttpPost("register")]

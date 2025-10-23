@@ -32,7 +32,8 @@ builder.Services.AddAuthentication().AddJwtBearer(options =>
             ValidateIssuerSigningKey = true,
             ValidIssuer = JwtValidIssuer,
             ValidAudience = JwtValidAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtApiKey))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtApiKey)),
+            RoleClaimType = "role"
         };
     }
 );
