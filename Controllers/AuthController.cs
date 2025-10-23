@@ -72,7 +72,7 @@ public class AuthController : ControllerBase
             });
 
             var token = _jwtTokenService.GenerateToken(user);
-            return Ok(new { token, refreshToken, user.Name, UserId = user.Id });
+            return Ok(new { token, user.Name, UserId = user.Id });
         }
         catch (Exception)
         {

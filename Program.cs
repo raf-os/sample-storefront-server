@@ -8,6 +8,8 @@ using SampleStorefront.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 var JwtApiKey = builder.Configuration["Jwt:Key"] ?? throw new Exception("Jwt key is null.");
+var JwtValidIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new Exception("Jwt issuer is null.");
+var JwtValidAudience = builder.Configuration["Jwt:Audience"] ?? throw new Exception("Jwt audience is null.");
 
 builder.Services.AddControllers().AddNewtonsoftJson();
 
@@ -28,8 +30,8 @@ builder.Services.AddAuthentication().AddJwtBearer(options =>
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = "sampleStorefrontServer",
-            ValidAudience = "sampleStorefrontClient",
+            ValidIssuer = JwtValidIssuer,
+            ValidAudience = JwtValidAudience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtApiKey))
         };
     }
