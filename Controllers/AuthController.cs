@@ -15,7 +15,6 @@ public class AuthController : ControllerBase
     private readonly JwtTokenService _jwtTokenService;
     public record LoginRequest(string Username, string Password);
     public record RegisterRequest(string Username, string Password, string Email);
-    public record RefreshRequest(string RefreshToken);
 
     public AuthController(AppDbContext db, PasswordService passwordService, JwtTokenService jwtTokenService)
     {
@@ -81,12 +80,13 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("refresh")]
-    public async Task<IActionResult> TokenRefresh(RefreshRequest request)
+    public async Task<IActionResult> TokenRefresh()
     {
-        var requestToken = request.RefreshToken;
+        if (!Request.Cookies.TryGetValue("refreshToken", out var refreshToken))
+            return Unauthorized();
 
         var tokenLookup = await _db.RefreshTokens
-            .Where(t => t.Token == requestToken)
+            .Where(t => t.Token == refreshToken)
             .SingleOrDefaultAsync();
 
         if (tokenLookup == null || tokenLookup.ExpiresAt < DateTime.UtcNow)
