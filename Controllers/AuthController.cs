@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SampleStorefront.Context;
@@ -14,7 +15,17 @@ public class AuthController : ControllerBase
     private readonly PasswordService _passwordService;
     private readonly JwtTokenService _jwtTokenService;
     public record LoginRequest(string Username, string Password);
-    public record RegisterRequest(string Username, string Password, string Email);
+    public record RegisterRequest
+    {
+        [StringLength(30, MinimumLength = 3)]
+        public string Username { get; init; } = default!;
+
+        [StringLength(50, MinimumLength = 4)]
+        public string Password { get; init; } = default!;
+
+        [EmailAddress]
+        public string Email { get; init; } = default!;
+    }
 
     public AuthController(AppDbContext db, PasswordService passwordService, JwtTokenService jwtTokenService)
     {
