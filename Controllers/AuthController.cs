@@ -40,7 +40,7 @@ public class AuthController : ControllerBase
         _db.RefreshTokens.Add(new RefreshToken
         {
             Token = refreshToken,
-            UserId = userId.ToString(),
+            UserId = userId,
             ExpiresAt = DateTime.UtcNow.AddDays(30)
         });
 
@@ -94,7 +94,10 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> TokenRefresh()
     {
         if (!Request.Cookies.TryGetValue("refreshToken", out var refreshToken))
+        {
             return Unauthorized();
+        }
+
 
         var tokenLookup = await _db.RefreshTokens
             .Where(t => t.Token == refreshToken)
@@ -106,7 +109,7 @@ public class AuthController : ControllerBase
         }
 
         var user = await _db.Users
-            .Where(u => u.Id.ToString() == tokenLookup.UserId)
+            .Where(u => u.Id == tokenLookup.UserId)
             .SingleOrDefaultAsync();
 
         if (user == null)
