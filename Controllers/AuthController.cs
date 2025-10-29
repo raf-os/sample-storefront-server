@@ -162,4 +162,12 @@ public class AuthController : ControllerBase
 
         return Created();
     }
+
+    [HttpPost("logout")]
+    public async Task<IActionResult> UserLogout()
+    {
+        Response.Cookies.Delete("refreshToken");
+
+        return NoContent();
+    }
 }
