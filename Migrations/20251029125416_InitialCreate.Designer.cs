@@ -11,7 +11,7 @@ using SampleStorefront.Context;
 namespace sample_storefront_server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251018184828_InitialCreate")]
+    [Migration("20251029125416_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -29,11 +29,14 @@ namespace sample_storefront_server.Migrations
                     b.Property<string>("Content")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("PostDate")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("ProductId")
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("Score")
-                        .HasColumnType("INTEGER");
+                    b.Property<float>("Score")
+                        .HasColumnType("REAL");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("TEXT");
@@ -92,8 +95,7 @@ namespace sample_storefront_server.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
+                    b.Property<Guid>("UserId")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -124,6 +126,9 @@ namespace sample_storefront_server.Migrations
 
                     b.Property<int>("Role")
                         .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("SignupDate")
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
