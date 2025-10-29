@@ -98,13 +98,13 @@ public class AuthController : ControllerBase
             return Unauthorized();
         }
 
-
         var tokenLookup = await _db.RefreshTokens
             .Where(t => t.Token == refreshToken)
             .SingleOrDefaultAsync();
 
         if (tokenLookup == null || tokenLookup.ExpiresAt < DateTime.UtcNow)
         {
+            Response.Cookies.Delete("refreshToken");
             return Unauthorized();
         }
 
@@ -114,6 +114,7 @@ public class AuthController : ControllerBase
 
         if (user == null)
         {
+            Response.Cookies.Delete("refreshToken");
             return Unauthorized();
         }
 
