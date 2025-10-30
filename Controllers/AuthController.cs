@@ -163,9 +163,21 @@ public class AuthController : ControllerBase
         return Created();
     }
 
-    [HttpPost("logout")]
-    public IActionResult UserLogout()
+    [HttpGet("logout")]
+    public async Task<IActionResult> UserLogout()
     {
+        if (!Request.Cookies.TryGetValue("refreshToken", out var refreshToken))
+        {
+            // Invalidate existing token
+            var existingToken = await _db.RefreshTokens.Where(t => t.Token == refreshToken).SingleOrDefaultAsync();
+            if (existingToken != null)
+            {
+                _db.RefreshTokens.Remove(existingToken);
+
+                await _db.SaveChangesAsync();
+            }
+        }
+        
         Response.Cookies.Delete("refreshToken");
 
         return NoContent();
