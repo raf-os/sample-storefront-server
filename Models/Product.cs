@@ -18,6 +18,7 @@ public class Product
     public float? Discount { get; set; }
     public string? Description { get; set; }
     public ProductRating Rating { get; set; } = new ProductRating();
+    public List<string> Tags { get; set; } = [];
 
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
@@ -54,6 +55,7 @@ public class ProductDTO
     public float? Discount { get; set; }
     public string? Description { get; set; }
     public ProductRating Rating { get; set; } = null!;
+    public List<string> Tags { get; set; } = [];
 
     public Guid UserId { get; set; }
     public UserDTO User { get; set; } = null!;
@@ -70,6 +72,7 @@ public class ProductDTO
         Discount = p.Discount;
         Description = p.Description;
         Rating = p.Rating;
+        Tags = p.Tags;
 
         UserId = p.UserId;
         User = new UserDTO(p.User);
