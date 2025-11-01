@@ -5,8 +5,14 @@ namespace SampleStorefront.Models;
 [Owned]
 public class ProductRating
 {
-    public float? Value;
-    public int Amount = 0;
+    public float? Value { get; set; }
+    public int Amount { get; set; } = 0;
+}
+
+[Owned]
+public class ProductMetadata
+{
+    public int Sales { get; set; } = 0;
 }
 
 public class Product
@@ -19,6 +25,7 @@ public class Product
     public string? Description { get; set; }
     public ProductRating Rating { get; set; } = new ProductRating();
     public List<string> Tags { get; set; } = [];
+    public ProductMetadata Metadata { get; set; } = new ProductMetadata();
 
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
@@ -56,6 +63,7 @@ public class ProductDTO
     public string? Description { get; set; }
     public ProductRating Rating { get; set; } = null!;
     public List<string> Tags { get; set; } = [];
+    public ProductMetadata Metadata { get; set; } = null!;
 
     public Guid UserId { get; set; }
     public UserDTO User { get; set; } = null!;
@@ -73,6 +81,7 @@ public class ProductDTO
         Description = p.Description;
         Rating = p.Rating;
         Tags = p.Tags;
+        Metadata = p.Metadata;
 
         UserId = p.UserId;
         User = new UserDTO(p.User);
