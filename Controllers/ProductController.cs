@@ -80,7 +80,7 @@ public class ProductController : ControllerBase
 
         await _db.SaveChangesAsync();
 
-        return Created(string.Empty, new { prod.Id });
+        return CreatedAtAction(nameof(FetchPage), new { prod.Id }, new { prod.Id });
     }
 
     [Authorize]
