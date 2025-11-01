@@ -69,16 +69,18 @@ public class ProductController : ControllerBase
             return Unauthorized();
         }
 
-        _db.Products.Add(new Product
+        var prod = new Product
         {
             Name = product.Name,
             Price = product.Price,
             Description = product.Description
-        });
+        };
+
+        _db.Products.Add(prod);
 
         await _db.SaveChangesAsync();
 
-        return Created();
+        return Created(string.Empty, new { prod.Id });
     }
 
     [Authorize]
