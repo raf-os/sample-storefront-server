@@ -9,6 +9,8 @@ public class AppDbContext : DbContext
     public DbSet<Comment> Comments { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
+    public DbSet<Category> Categories { get; set; }
+    public DbSet<ProductCategory> ProductCategories { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -22,6 +24,11 @@ public class AppDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id)
                 .ValueGeneratedOnAdd();
+        });
+
+        modelBuilder.Entity<ProductCategory>(entity =>
+        {
+            entity.HasKey(pc => new { pc.ProductId, pc.CategoryId });
         });
     }
 }

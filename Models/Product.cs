@@ -31,15 +31,17 @@ public class Product
     public User User { get; set; } = null!;
 
     public ICollection<Comment> Comments { get; set; } = [];
+    public ICollection<ProductCategory> ProductCategories { get; set; } = [];
 }
 
 public class ProductListItemDTO
 {
     public Guid Id { get; set; }
     public DateTime CreationDate { get; set; }
-    public string Name { get; set; } = default!;
+    public string Name { get; set; } = null!;
     public float Price { get; set; }
     public float? Discount { get; set; }
+    public ICollection<ProductCategory> ProductCategories { get; set; } = [];
 
     public ProductListItemDTO() { }
 
@@ -50,6 +52,8 @@ public class ProductListItemDTO
         Name = p.Name;
         Price = p.Price;
         Discount = p.Discount;
+
+        ProductCategories = p.ProductCategories;
     }
 }
 
@@ -69,6 +73,7 @@ public class ProductDTO
     public UserDTO User { get; set; } = null!;
 
     public ICollection<CommentDTO>? Comments { get; set; }
+    public ICollection<ProductCategory> ProductCategories { get; set; } = [];
 
     public ProductDTO() { }
     public ProductDTO(Product p)
@@ -90,6 +95,8 @@ public class ProductDTO
         {
             Comments = p.Comments.Select(c => new CommentDTO(c)).ToList();
         }
+
+        ProductCategories = p.ProductCategories;
     }
 }
 

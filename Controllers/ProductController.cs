@@ -23,26 +23,44 @@ public class ProductController : ControllerBase
     }
 
     [HttpGet("page")]
-    public async Task<IActionResult> FetchPage([Range(0, int.MaxValue)] int offset = 0)
+    public async Task<IActionResult> FetchPage(
+        int? category,
+        [Range(0, int.MaxValue)] int offset = 0
+        )
     {
         var totalCount = await _db.Products.CountAsync();
         var totalPages = MathF.Ceiling((float)totalCount / (float)_pageSize);
-        var query = await _db.Products
+        var query = _db.Products
+            .AsQueryable();
+        
+        if (category != null)
+        {
+            query = query
+                .Include(p => p.ProductCategories)
+                    .ThenInclude(pc => pc.Category)
+                .Where(p => p.ProductCategories
+                    .Any(pc => pc.CategoryId == category));
+        }
+
+        query = query
             .OrderBy(x => x.CreationDate)
             .Skip(offset * _pageSize)
-            .Take(_pageSize)
+            .Take(_pageSize);
+
+        var result = await query
             .Select(x => new
-            {
-                Product = new ProductListItemDTO(x),
-                CommentCount = x.Comments.Count()
-            })
+                {
+                    Product = new ProductListItemDTO(x),
+                    CommentCount = x.Comments.Count()
+                })
             .ToListAsync();
-        return Ok(new { items = query, totalPages });
+        return Ok(new { items = result, totalPages });
     }
 
     [HttpGet("item/{id}")]
     public async Task<IActionResult> FetchItem(Guid id)
     {
+        // TODO: Also fetch categories
         var item = await _db.Products
             .Where(x => x.Id == id)
             .Select(i => new ProductDTO(i))
@@ -62,6 +80,7 @@ public class ProductController : ControllerBase
     [HttpPut]
     public async Task<IActionResult> NewItem(NewProductRequest product)
     {
+        // TODO: Categories
         var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)!;
         var user = await _db.Users.Where(u => u.Id.ToString() == userId).SingleOrDefaultAsync();
         if (user == null || user.IsVerified == false)
@@ -89,6 +108,7 @@ public class ProductController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteItem(Guid id)
     {
+        // TODO: Remove categories as well
         var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)!;
         var user = await _db.Users.Where(u => u.Id.ToString() == userId).SingleOrDefaultAsync();
         if (user == null || user.IsVerified == false)
@@ -112,8 +132,9 @@ public class ProductController : ControllerBase
 
     [Authorize]
     [HttpPatch("{id}")]
-    public async Task<IActionResult> UpdateItem(Guid Id, [FromBody] JsonPatchDocument<ProductPatchDTO> patchItem)
+    public async Task<IActionResult> UpdateItem(Guid Id, [FromBody] JsonPatchDocument<ProductPatchDTO> patchItem, [FromBody] List<int> categoryIds)
     {
+        // TODO: Categories
         if (patchItem == null)
         {
             return BadRequest();
