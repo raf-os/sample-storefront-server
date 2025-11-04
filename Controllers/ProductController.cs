@@ -73,7 +73,9 @@ public class ProductController : ControllerBase
         {
             Name = product.Name,
             Price = product.Price,
-            Description = product.Description
+            Description = product.Description,
+            UserId = user.Id,
+            User = user,
         };
 
         _db.Products.Add(prod);

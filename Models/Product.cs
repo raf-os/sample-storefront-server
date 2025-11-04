@@ -30,7 +30,7 @@ public class Product
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
 
-    public List<Comment> Comments { get; set; } = [];
+    public ICollection<Comment> Comments { get; set; } = [];
 }
 
 public class ProductListItemDTO
@@ -68,7 +68,7 @@ public class ProductDTO
     public Guid UserId { get; set; }
     public UserDTO User { get; set; } = null!;
 
-    public List<CommentDTO>? Comments { get; set; }
+    public ICollection<CommentDTO>? Comments { get; set; }
 
     public ProductDTO() { }
     public ProductDTO(Product p)

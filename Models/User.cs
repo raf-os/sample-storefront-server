@@ -17,8 +17,8 @@ public class User
     public bool IsVerified { get; set; } = false;
     public UserRole Role { get; set; } = UserRole.User;
 
-    public List<Comment> Comments { get; set; } = [];
-    public List<Product> Products { get; set; } = [];
+    public ICollection<Comment> Comments { get; set; } = [];
+    public ICollection<Product> Products { get; set; } = [];
 }
 
 public class UserDTO
@@ -30,8 +30,8 @@ public class UserDTO
     public DateTime SignupDate { get; set; }
     public bool IsVerified { get; set; }
 
-    public List<CommentDTO>? Comments { get; set; }
-    public List<ProductDTO>? Products { get; set; }
+    public ICollection<CommentDTO>? Comments { get; set; }
+    public ICollection<ProductDTO>? Products { get; set; }
 
     public UserDTO() { }
     public UserDTO(User user)
