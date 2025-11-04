@@ -13,6 +13,8 @@ var JwtValidAudience = builder.Configuration["Jwt:Audience"] ?? throw new Except
 
 builder.Services.AddControllers().AddNewtonsoftJson();
 
+builder.Services.AddMemoryCache();
+
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi(options =>
@@ -56,6 +58,7 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<PasswordService>();
+builder.Services.AddScoped<CategoryService>();
 
 var app = builder.Build();
 
