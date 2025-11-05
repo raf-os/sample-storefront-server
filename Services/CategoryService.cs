@@ -22,6 +22,23 @@ public class CategoryService
         public required int Id { get; set; }
         public required string Name { get; set; }
         public List<TreeNode> Children { get; set; } = [];
+        public int? ParentId { get; set; }
+        public List<int> ChildIds { get; set; } = [];
+        private TreeNode? ParentNode;
+
+        public void AttachNode(TreeNode newChild)
+        {
+            newChild.ParentId = Id;
+            newChild.ParentNode = this;
+            AddChildId(newChild.Id); // Add to self
+            ParentNode?.AddChildId(newChild.Id); // Recursively add this ID upstream
+            Children.Add(newChild);
+        }
+
+        private void AddChildId(int childId)
+        {
+            ChildIds.Add(childId);
+        }
     }
 
     private TreeNode? FindNodeById(IEnumerable<TreeNode> nodes, int id)
@@ -41,14 +58,13 @@ public class CategoryService
 
     private async Task<List<TreeNode>?> CompileCategoryTree()
     {
+        // Transforms the 1-dimensional data into a tree graph
         var treeRoots = await _db.Categories
             .Where(r => r.ParentId == null)
             .ToListAsync();
 
         if (treeRoots == null)
             return null;
-
-        //Console.WriteLine(JsonSerializer.Serialize(treeRoots, new JsonSerializerOptions { WriteIndented = true }));
 
         var CompiledTree = new List<TreeNode>();
 
@@ -67,7 +83,7 @@ public class CategoryService
                 continue;
             var parentNode = FindNodeById(CompiledTree, (int)cat.ParentId);
 
-            parentNode?.Children.Add(new TreeNode { Id = cat.Id, Name = cat.Name });
+            parentNode?.AttachNode(new TreeNode { Id = cat.Id, Name = cat.Name });
         }
 
         return CompiledTree;
