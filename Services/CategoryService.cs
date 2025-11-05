@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using SampleStorefront.Context;
 using SampleStorefront.Models;
-using System.Text.Json;
 
 namespace SampleStorefront.Services;
 
@@ -22,22 +21,27 @@ public class CategoryService
         public required int Id { get; set; }
         public required string Name { get; set; }
         public List<TreeNode> Children { get; set; } = [];
-        public int? ParentId { get; set; }
-        public List<int> ChildIds { get; set; } = [];
+        public List<string> Keywords { get; set; } = [];
+        public List<int> Relationships { get; set; } = [];
         private TreeNode? ParentNode;
 
         public void AttachNode(TreeNode newChild)
         {
-            newChild.ParentId = Id;
             newChild.ParentNode = this;
-            AddChildId(newChild.Id); // Add to self
-            ParentNode?.AddChildId(newChild.Id); // Recursively add this ID upstream
+            AddRelationship(newChild);
+            ParentNode?.AddRelationship(newChild); // Recursively travel upwards and link the whole tree together
             Children.Add(newChild);
         }
 
-        private void AddChildId(int childId)
+        private void AddRelationship(TreeNode node)
         {
-            ChildIds.Add(childId);
+            if (!Relationships.Contains(node.Id))
+                Relationships.Add(node.Id);
+
+            if (!Keywords.Contains(node.Name))
+                Keywords.Add(node.Name);
+
+            ParentNode?.AddRelationship(node);
         }
     }
 
