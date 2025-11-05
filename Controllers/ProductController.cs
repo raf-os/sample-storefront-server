@@ -21,6 +21,11 @@ public class ProductController : ControllerBase
     {
         _db = db;
     }
+    public class UpdateItemRequest
+    {
+        public required JsonPatchDocument<ProductPatchDTO> PatchItem { get; set; }
+        public List<int> CategoryIds { get; set; } = [];
+    }
 
     [HttpGet("page")]
     public async Task<IActionResult> FetchPage(
@@ -132,8 +137,9 @@ public class ProductController : ControllerBase
 
     [Authorize]
     [HttpPatch("{id}")]
-    public async Task<IActionResult> UpdateItem(Guid Id, [FromBody] JsonPatchDocument<ProductPatchDTO> patchItem, [FromBody] List<int> categoryIds)
+    public async Task<IActionResult> UpdateItem(Guid Id, [FromBody] UpdateItemRequest request)
     {
+        var patchItem = request.PatchItem;
         // TODO: Categories
         if (patchItem == null)
         {

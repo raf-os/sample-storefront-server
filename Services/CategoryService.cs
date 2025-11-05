@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using SampleStorefront.Context;
 using SampleStorefront.Models;
+using System.Text.Json;
 
 namespace SampleStorefront.Services;
 
@@ -41,11 +42,13 @@ public class CategoryService
     private async Task<List<TreeNode>?> CompileCategoryTree()
     {
         var treeRoots = await _db.Categories
-            .Where(r => r.ParentId != null)
+            .Where(r => r.ParentId == null)
             .ToListAsync();
 
         if (treeRoots == null)
             return null;
+
+        //Console.WriteLine(JsonSerializer.Serialize(treeRoots, new JsonSerializerOptions { WriteIndented = true }));
 
         var CompiledTree = new List<TreeNode>();
 
@@ -54,16 +57,17 @@ public class CategoryService
             CompiledTree.Add(new TreeNode { Id = node.Id, Name = node.Name });
         }
 
-        foreach (Category cat in treeRoots)
+        var treeLeafs = await _db.Categories
+            .Where(r => r.ParentId != null)
+            .ToListAsync();
+
+        foreach (Category cat in treeLeafs)
         {
             if (cat.ParentId == null)
                 continue;
             var parentNode = FindNodeById(CompiledTree, (int)cat.ParentId);
 
-            if (parentNode != null)
-            {
-                parentNode.Children.Add(new TreeNode { Id = cat.Id, Name = cat.Name });
-            }
+            parentNode?.Children.Add(new TreeNode { Id = cat.Id, Name = cat.Name });
         }
 
         return CompiledTree;

@@ -23,6 +23,6 @@ public class CategoryController : ControllerBase
         if (categories == null)
             return NotFound();
 
-        return Ok(categories);
+        return Ok(new { Categories = categories });
     }
 }
