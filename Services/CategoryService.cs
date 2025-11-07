@@ -22,21 +22,24 @@ public class CategoryService
         public required string Name { get; set; }
         public List<TreeNode> Children { get; set; } = [];
         public List<string> Keywords { get; set; } = [];
-        public List<int> Relationships { get; set; } = [];
+        public List<int> Parents { get; set; } = [];
+        public List<int> ChildIds { get; set; } = [];
         private TreeNode? ParentNode;
 
         public void AttachNode(TreeNode newChild)
         {
             newChild.ParentNode = this;
             AddRelationship(newChild);
-            ParentNode?.AddRelationship(newChild); // Recursively travel upwards and link the whole tree together
             Children.Add(newChild);
         }
 
         private void AddRelationship(TreeNode node)
         {
-            if (!Relationships.Contains(node.Id))
-                Relationships.Add(node.Id);
+            if (!node.Parents.Contains(Id))
+                node.Parents.Add(Id);
+
+            if (!ChildIds.Contains(node.Id))
+                ChildIds.Add(node.Id);
 
             if (!Keywords.Contains(node.Name))
                 Keywords.Add(node.Name);
