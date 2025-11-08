@@ -16,6 +16,12 @@ public class CategoryService
         _db = db;
     }
 
+    public class CompiledCategoryTree
+    {
+        public List<TreeNode> CompiledTree { get; set; } = [];
+        public List<TreeNode> FlatTree { get; set; } = [];
+    }
+
     public class TreeNode
     {
         public required int Id { get; set; }
@@ -63,7 +69,7 @@ public class CategoryService
         return null;
     }
 
-    private async Task<List<TreeNode>?> CompileCategoryTree()
+    private async Task<CompiledCategoryTree?> CompileCategoryTree()
     {
         // Transforms the 1-dimensional data into a tree graph
         var treeRoots = await _db.Categories
@@ -74,10 +80,13 @@ public class CategoryService
             return null;
 
         var CompiledTree = new List<TreeNode>();
+        var FlatTree = new List<TreeNode>();
 
         foreach (var node in treeRoots)
         {
-            CompiledTree.Add(new TreeNode { Id = node.Id, Name = node.Name });
+            var newNode = new TreeNode { Id = node.Id, Name = node.Name };
+            CompiledTree.Add(newNode);
+            FlatTree.Add(newNode);
         }
 
         var treeLeafs = await _db.Categories
@@ -90,10 +99,13 @@ public class CategoryService
                 continue;
             var parentNode = FindNodeById(CompiledTree, (int)cat.ParentId);
 
-            parentNode?.AttachNode(new TreeNode { Id = cat.Id, Name = cat.Name });
+            var newNode = new TreeNode { Id = cat.Id, Name = cat.Name };
+            parentNode?.AttachNode(newNode);
+            FlatTree.Add(newNode);
         }
 
-        return CompiledTree;
+        var Tree = new CompiledCategoryTree { CompiledTree = CompiledTree, FlatTree = FlatTree };
+        return Tree;
     }
 
     public void InvalidateCache()
@@ -101,7 +113,7 @@ public class CategoryService
         _cache.Remove("CategoryTree");
     }
 
-    public async Task<List<TreeNode>?> GetCategoryTree()
+    public async Task<CompiledCategoryTree?> GetCategoryTree()
     {
         var categoryTree = await _cache.GetOrCreateAsync("CategoryTree", async entry =>
         {
