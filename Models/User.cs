@@ -21,6 +21,7 @@ public class User
     public ICollection<Product> Products { get; set; } = [];
 }
 
+// Only the user themselves should ever receive this data
 public class UserDTO
 {
     public Guid Id { get; set; }
@@ -44,6 +45,36 @@ public class UserDTO
         IsVerified = user.IsVerified;
 
         Role = user.Role;
+
+        if (user.Comments != null)
+        {
+            Comments = user.Comments.Select(c => new CommentDTO(c)).ToList();
+        }
+
+        if (user.Products != null)
+        {
+            Products = user.Products.Select(p => new ProductDTO(p)).ToList();
+        }
+    }
+}
+
+// This is an user's public data
+public class UserPublicDTO
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = default!;
+    public UserRole Role { get; set; }
+    public DateTime SignupDate { get; set; }
+    public ICollection<CommentDTO>? Comments { get; set; }
+    public ICollection<ProductDTO>? Products { get; set; }
+
+    public UserPublicDTO() { }
+    public UserPublicDTO(User user)
+    {
+        Id = user.Id;
+        Name = user.Name;
+        Role = user.Role;
+        SignupDate = user.SignupDate;
 
         if (user.Comments != null)
         {

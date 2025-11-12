@@ -37,7 +37,7 @@ public class CommentDTO
     public ProductDTO Product { get; set; } = null!;
 
     public Guid UserId { get; set; }
-    public UserDTO User { get; set; } = null!;
+    public UserPublicDTO User { get; set; } = null!;
 
     public CommentDTO() { }
     public CommentDTO(Comment c)
@@ -51,6 +51,6 @@ public class CommentDTO
         Product = new ProductDTO(c.Product);
 
         UserId = c.UserId;
-        User = new UserDTO(c.User);
+        User = new UserPublicDTO(c.User);
     }
 }

@@ -70,7 +70,7 @@ public class ProductDTO
     public ProductMetadata Metadata { get; set; } = null!;
 
     public Guid UserId { get; set; }
-    public UserDTO User { get; set; } = null!;
+    public UserPublicDTO User { get; set; } = null!;
 
     public ICollection<CommentDTO>? Comments { get; set; }
     public ICollection<ProductCategory> ProductCategories { get; set; } = [];
@@ -89,7 +89,7 @@ public class ProductDTO
         Metadata = p.Metadata;
 
         UserId = p.UserId;
-        User = new UserDTO(p.User);
+        User = new UserPublicDTO(p.User);
 
         if (p.Comments != null)
         {
