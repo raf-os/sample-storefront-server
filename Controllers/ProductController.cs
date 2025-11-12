@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.EntityFrameworkCore;
 using SampleStorefront.Context;
 using SampleStorefront.Models;
+using SampleStorefront.Services;
 
 namespace SampleStorefront.Controllers;
 
@@ -14,17 +15,25 @@ namespace SampleStorefront.Controllers;
 [Route("api/[controller]")]
 public class ProductController : ControllerBase
 {
-    public record NewProductRequest(string Name, float Price, string? Description);
+    public class NewProductRequest
+    {
+        public required string Name { get; set; }
+        public required float Price { get; set; }
+        public string? Description { get; set; }
+        public List<int>? Categories { get; set; }
+    }
     private readonly int _pageSize = 10;
     private readonly AppDbContext _db;
-    public ProductController(AppDbContext db)
+    private readonly CategoryService _categoryService;
+    public ProductController(AppDbContext db, CategoryService categoryService)
     {
         _db = db;
+        _categoryService = categoryService;
     }
     public class UpdateItemRequest
     {
         public required JsonPatchDocument<ProductPatchDTO> PatchItem { get; set; }
-        public List<int> CategoryIds { get; set; } = [];
+        public List<int> Categories { get; set; } = [];
     }
 
     [HttpGet("page")]
@@ -85,13 +94,14 @@ public class ProductController : ControllerBase
     [HttpPut]
     public async Task<IActionResult> NewItem(NewProductRequest product)
     {
-        // TODO: Categories
         var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)!;
         var user = await _db.Users.Where(u => u.Id.ToString() == userId).SingleOrDefaultAsync();
         if (user == null || user.IsVerified == false)
         {
             return Unauthorized();
         }
+
+        var categoryIds = await _categoryService.ProcessCategoryFromList(product.Categories);
 
         var prod = new Product
         {
@@ -101,6 +111,16 @@ public class ProductController : ControllerBase
             UserId = user.Id,
             User = user,
         };
+
+        if (categoryIds != null)
+        {
+            var catList = new List<ProductCategory>();
+            foreach (var id in categoryIds)
+            {
+                catList.Add(new ProductCategory { CategoryId = id });
+            }
+            prod.ProductCategories = catList;
+        }
 
         _db.Products.Add(prod);
 
@@ -140,7 +160,7 @@ public class ProductController : ControllerBase
     public async Task<IActionResult> UpdateItem(Guid Id, [FromBody] UpdateItemRequest request)
     {
         var patchItem = request.PatchItem;
-        // TODO: Categories
+
         if (patchItem == null)
         {
             return BadRequest();
@@ -157,11 +177,44 @@ public class ProductController : ControllerBase
 
         if (productToPatch.UserId.ToString() != userId)
             return Unauthorized();
-
+        
         patchItem.ApplyTo(dto, ModelState);
 
         if (!ModelState.IsValid)
             return BadRequest();
+
+        var categoryIds = await _categoryService.ProcessCategoryFromList(request.Categories);
+
+        var currentCategories = (request.Categories != null) ? (await _db.ProductCategories
+            .Where(pc => pc.ProductId == productToPatch.Id)
+            .Select(pc => pc.CategoryId)
+            .ToListAsync()) : null;
+        
+        if (currentCategories != null && request.Categories != null)
+        {
+            var toAdd = request.Categories.Except(currentCategories).ToList();
+            var toRemove = currentCategories.Except(request.Categories).ToList();
+
+            if (toRemove.Count != 0)
+            {
+                var categoriesToRemove = await _db.ProductCategories
+                    .Where(pc => pc.ProductId == productToPatch.Id && toRemove.Contains(pc.CategoryId))
+                    .ToListAsync();
+
+                _db.ProductCategories.RemoveRange(categoriesToRemove);
+            }
+
+            if (toAdd.Count != 0)
+            {
+                var newCategories = toAdd.Select(categoryId => new ProductCategory
+                {
+                    ProductId = productToPatch.Id,
+                    CategoryId = categoryId
+                });
+
+                _db.ProductCategories.AddRange(newCategories);
+            }
+        }
 
         if (dto.Name != null) productToPatch.Name = dto.Name;
         if (dto.Price.HasValue) productToPatch.Price = dto.Price.Value;

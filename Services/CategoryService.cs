@@ -123,4 +123,49 @@ public class CategoryService
 
         return categoryTree;
     }
+
+    public async Task<List<int>?> ProcessCategoryFromList(List<int>? categoryIdList)
+    {
+        if (categoryIdList == null || categoryIdList.Count == 0)
+            return null;
+            
+        var categoryTree = await GetCategoryTree();
+        if (categoryTree == null)
+            return null;
+
+        var validCategoryIds = await _db.Categories
+            .Where(c => categoryIdList.Contains(c.Id))
+            .Select(c => c.Id)
+            .ToListAsync();
+        var invalidIds = categoryIdList.Except(validCategoryIds).ToList();
+
+        if (invalidIds.Count != 0)
+        {
+            throw new ArgumentException($"Invalid category IDs: {string.Join(", ", invalidIds)}");
+        }
+
+        var flatTree = categoryTree.FlatTree;
+        List<int> processedIds = [];
+
+        foreach (var id in categoryIdList)
+        {
+            var node = flatTree.Find(n => n.Id == id);
+
+            if (node == null)
+                throw new KeyNotFoundException($"Invalid category ID: {id}.");
+
+            if (!processedIds.Contains(id))
+                processedIds.Add(id);
+
+            foreach (var parent in node.Parents)
+            {
+                if (processedIds.Contains(parent)) // If the parent is already there, chances are this whole process has been done already
+                    break; // early return
+                else
+                    processedIds.Add(parent);
+            }
+        }
+
+        return processedIds;
+    }
 }
