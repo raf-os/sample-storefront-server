@@ -77,7 +77,7 @@ public class ProductController : ControllerBase
         // TODO: Also fetch categories
         var item = await _db.Products
             .Where(x => x.Id == id)
-            .Select(i => new ProductDTO(i))
+            .Select(x => new ProductDTO(x))
             .SingleOrDefaultAsync();
 
         if (item == null)
@@ -94,10 +94,15 @@ public class ProductController : ControllerBase
     [HttpPut]
     public async Task<IActionResult> NewItem(NewProductRequest product)
     {
-        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)!;
-        var user = await _db.Users.Where(u => u.Id.ToString() == userId).SingleOrDefaultAsync();
+        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (!Guid.TryParse(userId, out var userGuid))
+        {
+            return Unauthorized();
+        }
+        var user = await _db.Users.Where(u => u.Id == userGuid).SingleOrDefaultAsync();
         if (user == null || user.IsVerified == false)
         {
+            
             return Unauthorized();
         }
 

@@ -1,4 +1,7 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
 using SampleStorefront.Context;
@@ -59,6 +62,9 @@ builder.Services.AddCors(options =>
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<PasswordService>();
 builder.Services.AddScoped<CategoryService>();
+
+JsonWebTokenHandler.DefaultInboundClaimTypeMap.Clear();
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 var app = builder.Build();
 
