@@ -22,6 +22,13 @@ public class ProductController : ControllerBase
         public string? Description { get; set; }
         public List<int>? Categories { get; set; }
     }
+    public class PageFetchFilter
+    {
+        public int? Category { get; set; }
+        [Range(0, int.MaxValue)]
+        public int Offset { get; set; } = 0;
+        public Guid? UserId { get; set; }
+    }
     private readonly int _pageSize = 10;
     private readonly AppDbContext _db;
     private readonly CategoryService _categoryService;
@@ -37,28 +44,31 @@ public class ProductController : ControllerBase
     }
 
     [HttpGet("page")]
-    public async Task<IActionResult> FetchPage(
-        int? category,
-        [Range(0, int.MaxValue)] int offset = 0
-        )
+    public async Task<IActionResult> FetchPage(PageFetchFilter filter)
     {
         var totalCount = await _db.Products.CountAsync();
         var totalPages = MathF.Ceiling((float)totalCount / (float)_pageSize);
         var query = _db.Products
             .AsQueryable();
         
-        if (category != null)
+        if (filter.UserId != null)
+        {
+            query = query
+                .Where(p => p.UserId == filter.UserId);
+        }
+        
+        if (filter.Category != null)
         {
             query = query
                 .Include(p => p.ProductCategories)
                     .ThenInclude(pc => pc.Category)
                 .Where(p => p.ProductCategories
-                    .Any(pc => pc.CategoryId == category));
+                    .Any(pc => pc.CategoryId == filter.Category));
         }
 
         query = query
             .OrderBy(x => x.CreationDate)
-            .Skip(offset * _pageSize)
+            .Skip(filter.Offset * _pageSize)
             .Take(_pageSize);
 
         var result = await query
