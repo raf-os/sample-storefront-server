@@ -44,7 +44,7 @@ public class ProductController : ControllerBase
     }
 
     [HttpGet("page")]
-    public async Task<IActionResult> FetchPage(PageFetchFilter filter)
+    public async Task<IActionResult> FetchPage([FromQuery] PageFetchFilter filter)
     {
         var totalCount = await _db.Products.CountAsync();
         var totalPages = MathF.Ceiling((float)totalCount / (float)_pageSize);
