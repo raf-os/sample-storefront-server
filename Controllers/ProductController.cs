@@ -25,8 +25,8 @@ public class ProductController : ControllerBase
     public class PageFetchFilter
     {
         public int? Category { get; set; }
-        [Range(0, int.MaxValue)]
-        public int Offset { get; set; } = 0;
+        [Range(1, int.MaxValue)]
+        public int Offset { get; set; } = 1;
         public Guid? UserId { get; set; }
     }
     private readonly int _pageSize = 10;
@@ -68,7 +68,7 @@ public class ProductController : ControllerBase
 
         query = query
             .OrderBy(x => x.CreationDate)
-            .Skip(filter.Offset * _pageSize)
+            .Skip((filter.Offset - 1) * _pageSize)
             .Take(_pageSize);
 
         var result = await query
