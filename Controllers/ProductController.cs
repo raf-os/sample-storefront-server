@@ -82,6 +82,8 @@ public class ProductController : ControllerBase
     }
 
     [HttpGet("item/{id}")]
+    [ProducesResponseType<ProductDTO>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> FetchItem(Guid id)
     {
         // TODO: Also fetch categories
@@ -98,6 +100,30 @@ public class ProductController : ControllerBase
         {
             return Ok(item);
         }
+    }
+
+    [HttpGet("item/{id}/comments")]
+    [ProducesResponseType<List<CommentDTO>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> FetchItemComments(Guid id, [FromQuery] [Range(1, int.MaxValue)] int offset = 1)
+    {
+        var query = _db.Comments
+            .Where(c => c.ProductId == id)
+            .OrderBy(c => c.PostDate)
+            .Include(c => c.User)
+            .AsQueryable();
+        
+        if (offset > 1)
+        {
+            query = query
+                .Skip((offset - 1) * _pageSize)
+                .Take(_pageSize);
+        }
+        
+        var comments = query
+            .Select(c => new CommentDTO(c))
+            .ToListAsync();
+        
+        return Ok(comments);
     }
 
     [Authorize]
