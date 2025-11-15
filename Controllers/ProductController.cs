@@ -119,7 +119,7 @@ public class ProductController : ControllerBase
                 .Take(_pageSize);
         }
         
-        var comments = query
+        var comments = await query
             .Select(c => new CommentDTO(c))
             .ToListAsync();
         
