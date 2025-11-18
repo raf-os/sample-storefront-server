@@ -120,7 +120,18 @@ public class ProductController : ControllerBase
         }
         
         var comments = await query
-            .Select(c => new CommentDTO(c))
+            .Select(c => new CommentDTO
+            {
+                Id = c.Id,
+                PostDate = c.PostDate,
+                Content = c.Content,
+                Score = c.Score,
+
+                ProductId = c.ProductId,
+                UserId = c.UserId,
+
+                User = new UserPublicDTO(c.User)
+            })
             .ToListAsync();
         
         return Ok(comments);

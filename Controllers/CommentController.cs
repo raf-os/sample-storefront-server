@@ -10,12 +10,12 @@ using SampleStorefront.Models;
 namespace SampleStorefront.Controllers;
 
 [ApiController]
-[Route("api/product/[controller]")]
+[Route("api/[controller]")]
 public class CommentController : ControllerBase
 {
     private readonly int _pageSize = 6;
     private readonly AppDbContext _db;
-    public record PostCommentRequest(float Score, string Content);
+    public record PostCommentRequest(float Rating, string Content);
 
     public CommentController(AppDbContext db)
     {
@@ -77,7 +77,7 @@ public class CommentController : ControllerBase
     public async Task<IActionResult> AddComment(Guid Id, [FromBody] PostCommentRequest request)
     {
         var content = request.Content;
-        var score = request.Score;
+        var score = request.Rating;
 
         if (score < 0f || score > 5f)
         {
@@ -89,8 +89,12 @@ public class CommentController : ControllerBase
         if (product == null)
             return NotFound();
 
-        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)!;
-        var user = await _db.Users.Where(u => u.Id.ToString() == userId).FirstOrDefaultAsync();
+        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (!Guid.TryParse(userId, out var userGuid))
+        {
+            return Unauthorized();
+        }
+        var user = await _db.Users.Where(u => u.Id == userGuid).FirstOrDefaultAsync();
         if (user == null || user.IsVerified == false)
             return Unauthorized();
 

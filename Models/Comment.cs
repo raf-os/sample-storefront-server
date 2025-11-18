@@ -50,9 +50,11 @@ public class CommentDTO
         Score = c.Score;
 
         ProductId = c.ProductId;
-        Product = new ProductDTO(c.Product);
+        if (c.Product != null)
+            Product = new ProductDTO(c.Product);
 
         UserId = c.UserId;
-        User = new UserPublicDTO(c.User);
+        if (c.User != null)
+            User = new UserPublicDTO(c.User);
     }
 }
