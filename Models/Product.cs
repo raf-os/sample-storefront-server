@@ -103,21 +103,21 @@ public class ProductDTO
 
 public class ProductPatchDTO
 {
-    public Guid Id { get; }
+    //public Guid Id { get; }
     public string? Name { get; set; }
     public float? Price { get; set; }
     public float? Discount { get; set; }
     public string? Description { get; set; }
-    public Guid UserId { get; }
+    // public Guid UserId { get; }
 
     public ProductPatchDTO() { }
     public ProductPatchDTO(Product p)
     {
-        Id = p.Id;
+        //Id = p.Id;
         Name = p.Name;
         Price = p.Price;
         Discount = p.Discount;
         Description = p.Description;
-        UserId = p.UserId;
+        // UserId = p.UserId;
     }
 }
