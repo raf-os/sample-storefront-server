@@ -86,9 +86,9 @@ public class ProductController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> FetchItem(Guid id)
     {
-        // TODO: Also fetch categories
         var item = await _db.Products
             .Where(x => x.Id == id)
+            .Include(x => x.ProductCategories)
             .Select(x => new ProductDTO(x))
             .SingleOrDefaultAsync();
 
