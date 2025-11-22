@@ -40,7 +40,7 @@ public class ProductController : ControllerBase
     public class UpdateItemRequest
     {
         public required JsonPatchDocument<ProductPatchDTO> PatchItem { get; set; }
-        public List<int> Categories { get; set; } = [];
+        public List<int>? Categories { get; set; } = [];
     }
 
     [HttpGet("page")]
@@ -89,6 +89,7 @@ public class ProductController : ControllerBase
         var item = await _db.Products
             .Where(x => x.Id == id)
             .Include(x => x.ProductCategories)
+                .ThenInclude(x => x.Category)
             .Select(x => new ProductDTO(x))
             .SingleOrDefaultAsync();
 
@@ -208,13 +209,14 @@ public class ProductController : ControllerBase
     }
 
     [Authorize]
-    [HttpPatch("{id}")]
-    public async Task<IActionResult> UpdateItem(Guid Id, [FromBody] UpdateItemRequest request)
+    [HttpPatch("{id:guid}")]
+    public async Task<IActionResult> UpdateItem(Guid Id, [FromBody] JsonPatchDocument<ProductPatchDTO> request)
     {
-        var patchItem = request.PatchItem;
+        var patchItem = request;
 
         if (patchItem == null)
         {
+            Console.WriteLine("beep");
             return BadRequest();
         }
 
@@ -232,20 +234,22 @@ public class ProductController : ControllerBase
         
         patchItem.ApplyTo(dto, ModelState);
 
+        var categories = dto.Categories;
+
         if (!ModelState.IsValid)
             return BadRequest();
 
-        var categoryIds = await _categoryService.ProcessCategoryFromList(request.Categories);
+        var categoryIds = await _categoryService.ProcessCategoryFromList(categories);
 
-        var currentCategories = (request.Categories != null) ? (await _db.ProductCategories
+        var currentCategories = (categories != null) ? (await _db.ProductCategories
             .Where(pc => pc.ProductId == productToPatch.Id)
             .Select(pc => pc.CategoryId)
             .ToListAsync()) : null;
         
-        if (currentCategories != null && request.Categories != null)
+        if (currentCategories != null && categories != null)
         {
-            var toAdd = request.Categories.Except(currentCategories).ToList();
-            var toRemove = currentCategories.Except(request.Categories).ToList();
+            var toAdd = categories.Except(currentCategories).ToList();
+            var toRemove = currentCategories.Except(categories).ToList();
 
             if (toRemove.Count != 0)
             {

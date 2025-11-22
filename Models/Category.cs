@@ -10,3 +10,17 @@ public class Category
 
     public ICollection<ProductCategory> ProductCategories { get; set; } = [];
 }
+
+public class CategoryDTO
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = null!;
+
+    public CategoryDTO() {}
+
+    public CategoryDTO(Category c)
+    {
+        Id = c.Id;
+        Name = c.Name;
+    }
+}

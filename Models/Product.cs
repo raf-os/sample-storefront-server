@@ -73,7 +73,8 @@ public class ProductDTO
     public UserPublicDTO? User { get; set; } = null!;
 
     public ICollection<CommentDTO>? Comments { get; set; }
-    public ICollection<ProductCategory> ProductCategories { get; set; } = [];
+    // public ICollection<ProductCategory> ProductCategories { get; set; } = [];
+    public ICollection<CategoryDTO> Categories { get; set; } = [];
 
     public ProductDTO() { }
     public ProductDTO(Product p)
@@ -97,7 +98,9 @@ public class ProductDTO
             Comments = p.Comments.Select(c => new CommentDTO(c)).ToList();
         }
 
-        ProductCategories = p.ProductCategories;
+        Categories = p.ProductCategories
+            .Select(pc => new CategoryDTO(pc.Category))
+            .ToList();
     }
 }
 
@@ -108,6 +111,7 @@ public class ProductPatchDTO
     public float? Price { get; set; }
     public float? Discount { get; set; }
     public string? Description { get; set; }
+    public List<int> Categories { get; set; } = [];
     // public Guid UserId { get; }
 
     public ProductPatchDTO() { }
