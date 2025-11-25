@@ -41,7 +41,7 @@ public class ProductListItemDTO
     public string Name { get; set; } = null!;
     public float Price { get; set; }
     public float? Discount { get; set; }
-    public ICollection<ProductCategory> ProductCategories { get; set; } = [];
+    public ICollection<CategoryDTO> Categories { get; set; } = [];
 
     public ProductListItemDTO() { }
 
@@ -53,7 +53,9 @@ public class ProductListItemDTO
         Price = p.Price;
         Discount = p.Discount;
 
-        ProductCategories = p.ProductCategories;
+        Categories = p.ProductCategories
+            .Select(pc => new CategoryDTO(pc.Category))
+            .ToList();
     }
 }
 
