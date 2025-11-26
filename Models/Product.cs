@@ -32,6 +32,7 @@ public class Product
 
     public ICollection<Comment> Comments { get; set; } = [];
     public ICollection<ProductCategory> ProductCategories { get; set; } = [];
+    public ICollection<ImageUpload> Images { get; set; } = [];
 }
 
 public class ProductListItemDTO
@@ -42,6 +43,7 @@ public class ProductListItemDTO
     public float Price { get; set; }
     public float? Discount { get; set; }
     public ICollection<CategoryDTO> Categories { get; set; } = [];
+    public List<Guid> ImageIds { get; set; } = [];
 
     public ProductListItemDTO() { }
 
@@ -56,6 +58,9 @@ public class ProductListItemDTO
         Categories = p.ProductCategories
             .Select(pc => new CategoryDTO(pc.Category))
             .ToList();
+
+        if (p.Images != null)
+            ImageIds = p.Images.Select(x => x.Id).ToList();
     }
 }
 
@@ -70,6 +75,7 @@ public class ProductDTO
     public ProductRating Rating { get; set; } = null!;
     public List<string> Tags { get; set; } = [];
     public ProductMetadata Metadata { get; set; } = null!;
+    public List<Guid> ImageIds { get; set; } = [];
 
     public Guid UserId { get; set; }
     public UserPublicDTO? User { get; set; } = null!;
@@ -99,6 +105,9 @@ public class ProductDTO
         {
             Comments = p.Comments.Select(c => new CommentDTO(c)).ToList();
         }
+
+        if (p.Images != null)
+            ImageIds = p.Images.Select(x => x.Id).ToList();
 
         Categories = p.ProductCategories
             .Select(pc => new CategoryDTO(pc.Category))

@@ -5,9 +5,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.EntityFrameworkCore;
+using FileTypeChecker;
 using SampleStorefront.Context;
 using SampleStorefront.Models;
 using SampleStorefront.Services;
+using FileTypeChecker.Extensions;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Formats.Webp;
 
 namespace SampleStorefront.Controllers;
 
@@ -21,6 +26,7 @@ public class ProductController : ControllerBase
         public required float Price { get; set; }
         public string? Description { get; set; }
         public List<int>? Categories { get; set; }
+        public List<IFormFile>? Files { get; set; }
     }
     public class PageFetchFilter
     {
@@ -41,6 +47,63 @@ public class ProductController : ControllerBase
     {
         public required JsonPatchDocument<ProductPatchDTO> PatchItem { get; set; }
         public List<int>? Categories { get; set; } = [];
+    }
+
+    private static async Task<ImageUpload> SaveImageToWebp(IFormFile file, Guid userId)
+    {
+        Size finalSize = new(0, 0);
+        var dirPath = Path.Combine("Uploads", "Products");
+        Directory.CreateDirectory(dirPath);
+        var thumbPath = Path.Combine("Uploads", "Thumbnails", "Products");
+        Directory.CreateDirectory(thumbPath);
+
+        var fileGuid = Guid.NewGuid();
+        var fileName = $"{fileGuid}.webp";
+        var filePath = Path.Combine(dirPath, fileName);
+        var fileThumbPath = Path.Combine(thumbPath, fileName);
+
+        using (var image = await Image.LoadAsync(file.OpenReadStream()))
+        {
+            image.Mutate(x => x.AutoOrient());
+
+            if (image.Width > 1920 || image.Height > 1920)
+            {
+                image.Mutate(x => x.Resize(new ResizeOptions
+                {
+                    Size = new Size(1920, 1920),
+                    Mode = ResizeMode.Max
+                }));
+            }
+
+            image.Metadata.ExifProfile = null;
+
+            var thumbClone = image.Clone(x => x.Resize(new ResizeOptions
+            {
+                Size = new Size(256, 256),
+                Mode = ResizeMode.Max
+            }));
+
+            var encoder = new WebpEncoder
+            {
+                Quality = 85,
+                FileFormat = WebpFileFormatType.Lossy
+            };
+
+            finalSize = new Size(image.Width, image.Height);
+
+            await image.SaveAsync(filePath, encoder);
+            await thumbClone.SaveAsync(fileThumbPath, encoder);
+        }
+
+        return new ImageUpload
+        {
+            Id = fileGuid,
+            Width = finalSize.Width,
+            Height = finalSize.Height,
+            Url = filePath,
+            ThumbnailUrl = fileThumbPath,
+            UploaderId = userId
+        };
     }
 
     [HttpGet("page")]
@@ -139,9 +202,12 @@ public class ProductController : ControllerBase
     }
 
     [Authorize]
-    [HttpPut]
-    public async Task<IActionResult> NewItem(NewProductRequest product)
+    [HttpPost]
+    public async Task<IActionResult> NewItem([FromForm] NewProductRequest product)
     {
+        const long maxFileSize = 5 * 1024 * 1024; // 5 MB
+        var allowedExtensions = new[] { "PNG", "JPEG", "JPG", "WEBP" };
+
         var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
         if (!Guid.TryParse(userId, out var userGuid))
         {
@@ -150,8 +216,49 @@ public class ProductController : ControllerBase
         var user = await _db.Users.Where(u => u.Id == userGuid).SingleOrDefaultAsync();
         if (user == null || user.IsVerified == false)
         {
-            
+
             return Unauthorized();
+        }
+
+        var fileListObj = new List<ImageUpload>();
+        
+        if (product.Files != null && product.Files.Count != 0)
+        {
+            foreach (var file in product.Files)
+            {
+                if (file.Length > maxFileSize)
+                {
+                    return BadRequest($"File {file.FileName} exceeds maximum allowed size of 5MB.");
+                }
+
+                using (var stream = file.OpenReadStream())
+                {
+                    if (!stream.IsImage())
+                    {
+                        return BadRequest("Only image files are allowed.");
+                    }
+
+                    var fileType = FileTypeValidator.GetFileType(stream);
+
+                    if (!allowedExtensions.Contains(fileType.Name))
+                    {
+                        return BadRequest($"Invalid image type for file {file.FileName}.");
+                    }
+
+                    file.OpenReadStream().Position = 0;
+                }
+            }
+
+            var dirPath = Path.Combine("Uploads", "Products");
+            Directory.CreateDirectory(dirPath);
+            var thumbPath = Path.Combine("Uploads", "Thumbnails", "Products");
+            Directory.CreateDirectory(thumbPath);
+
+            foreach (var file in product.Files)
+            {
+                var fileObj = await SaveImageToWebp(file, user.Id);
+                fileListObj.Add(fileObj);
+            }
         }
 
         var categoryIds = await _categoryService.ProcessCategoryFromList(product.Categories);
@@ -164,6 +271,9 @@ public class ProductController : ControllerBase
             UserId = user.Id,
             User = user,
         };
+
+        if (fileListObj.Count != 0)
+            prod.Images = fileListObj;
 
         if (categoryIds != null)
         {
@@ -231,7 +341,7 @@ public class ProductController : ControllerBase
 
         if (productToPatch.UserId.ToString() != userId)
             return Unauthorized();
-        
+
         patchItem.ApplyTo(dto, ModelState);
 
         var categories = dto.Categories;
@@ -245,7 +355,7 @@ public class ProductController : ControllerBase
             .Where(pc => pc.ProductId == productToPatch.Id)
             .Select(pc => pc.CategoryId)
             .ToListAsync()) : null;
-        
+
         if (currentCategories != null && categories != null)
         {
             var toAdd = categories.Except(currentCategories).ToList();
@@ -280,5 +390,53 @@ public class ProductController : ControllerBase
         await _db.SaveChangesAsync();
 
         return Ok(dto);
+    }
+
+    private async Task<ImageUpload?> GetImageUploadData(Guid id)
+    {
+        var fileName = id.ToString();
+
+        var imageData = await _db.ImageUploads
+            .Where(x => x.Id == id)
+            .SingleOrDefaultAsync();
+
+        return imageData;
+    }
+
+    [HttpGet("image/{imageId:guid}")]
+    public async Task<IActionResult> GetImageById(Guid imageId)
+    {
+        var imageData = await GetImageUploadData(imageId);
+
+        if (imageData == null)
+            return NotFound();
+
+        var filePath = imageData.Url;
+
+        if (!System.IO.File.Exists(filePath))
+            return NotFound();
+
+        var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+        return File(fileStream, "image/webp");
+    }
+
+    [HttpGet("thumbnail/{thumbId:guid}")]
+    public async Task<IActionResult> GetThumbnailById(Guid thumbId)
+    {
+        var imageData = await GetImageUploadData(thumbId);
+
+        if (imageData == null)
+            return NotFound();
+
+        var filePath = imageData.ThumbnailUrl;
+
+        if (filePath == null)
+            return NotFound();
+
+        if (!System.IO.File.Exists(filePath))
+            return NotFound();
+
+        var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+        return File(fileStream, "image/webp");
     }
 }

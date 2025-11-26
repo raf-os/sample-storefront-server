@@ -1,10 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "tb0WuGVQc50=",
+  "dgSpecHash": "7q50SDIq0sw=",
   "success": true,
   "projectFilePath": "/home/rafael/VS Projects/sample-storefront/sample-storefront-server/sample-storefront-server.csproj",
   "expectedPackageFiles": [
     "/home/rafael/.nuget/packages/bcrypt.net-next/4.0.3/bcrypt.net-next.4.0.3.nupkg.sha512",
+    "/home/rafael/.nuget/packages/file.typechecker/4.3.0/file.typechecker.4.3.0.nupkg.sha512",
     "/home/rafael/.nuget/packages/humanizer.core/2.14.1/humanizer.core.2.14.1.nupkg.sha512",
     "/home/rafael/.nuget/packages/microsoft.aspnetcore.authentication.jwtbearer/9.0.10/microsoft.aspnetcore.authentication.jwtbearer.9.0.10.nupkg.sha512",
     "/home/rafael/.nuget/packages/microsoft.aspnetcore.jsonpatch/9.0.10/microsoft.aspnetcore.jsonpatch.9.0.10.nupkg.sha512",
@@ -59,6 +60,7 @@
     "/home/rafael/.nuget/packages/nswag.core.yaml/14.6.1/nswag.core.yaml.14.6.1.nupkg.sha512",
     "/home/rafael/.nuget/packages/nswag.generation/14.6.1/nswag.generation.14.6.1.nupkg.sha512",
     "/home/rafael/.nuget/packages/nswag.generation.aspnetcore/14.6.1/nswag.generation.aspnetcore.14.6.1.nupkg.sha512",
+    "/home/rafael/.nuget/packages/sixlabors.imagesharp/3.1.12/sixlabors.imagesharp.3.1.12.nupkg.sha512",
     "/home/rafael/.nuget/packages/sqlitepclraw.bundle_e_sqlite3/2.1.10/sqlitepclraw.bundle_e_sqlite3.2.1.10.nupkg.sha512",
     "/home/rafael/.nuget/packages/sqlitepclraw.core/2.1.10/sqlitepclraw.core.2.1.10.nupkg.sha512",
     "/home/rafael/.nuget/packages/sqlitepclraw.lib.e_sqlite3/2.1.10/sqlitepclraw.lib.e_sqlite3.2.1.10.nupkg.sha512",

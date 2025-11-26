@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
@@ -27,6 +28,11 @@ builder.Services.AddOpenApi(options =>
 
 builder.Services.AddDbContext<AppDbContext>();
 
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 10 * 1024 * 1024; // 10 MB
+});
+
 builder.Services.AddAuthentication().AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -42,6 +48,7 @@ builder.Services.AddAuthentication().AddJwtBearer(options =>
         };
     }
 );
+
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("ModOnly",

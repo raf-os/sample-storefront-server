@@ -15,6 +15,19 @@
           }
         }
       },
+      "File.TypeChecker/4.3.0": {
+        "type": "package",
+        "compile": {
+          "lib/netstandard2.0/FileTypeChecker.dll": {
+            "related": ".pdb"
+          }
+        },
+        "runtime": {
+          "lib/netstandard2.0/FileTypeChecker.dll": {
+            "related": ".pdb"
+          }
+        }
+      },
       "Humanizer.Core/2.14.1": {
         "type": "package",
         "compile": {
@@ -1127,6 +1140,22 @@
           "Microsoft.AspNetCore.App"
         ]
       },
+      "SixLabors.ImageSharp/3.1.12": {
+        "type": "package",
+        "compile": {
+          "lib/net6.0/SixLabors.ImageSharp.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net6.0/SixLabors.ImageSharp.dll": {
+            "related": ".xml"
+          }
+        },
+        "build": {
+          "build/SixLabors.ImageSharp.props": {}
+        }
+      },
       "SQLitePCLRaw.bundle_e_sqlite3/2.1.10": {
         "type": "package",
         "dependencies": {
@@ -1574,6 +1603,21 @@
         "lib/netstandard2.1/BCrypt.Net-Next.dll",
         "lib/netstandard2.1/BCrypt.Net-Next.xml",
         "readme.md"
+      ]
+    },
+    "File.TypeChecker/4.3.0": {
+      "sha512": "Bx7AOaFz7jNJwgXdM/Z+kmmGreTurvMEprnuNhcT/61rjFKoOnNjatWv00nT7xpY6n6SAPyeElttyCXvMziBdQ==",
+      "type": "package",
+      "path": "file.typechecker/4.3.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "docs/README.md",
+        "file.typechecker.4.3.0.nupkg.sha512",
+        "file.typechecker.nuspec",
+        "images/FileTypeCheckerLogo-150.png",
+        "lib/netstandard2.0/FileTypeChecker.dll",
+        "lib/netstandard2.0/FileTypeChecker.pdb"
       ]
     },
     "Humanizer.Core/2.14.1": {
@@ -3606,6 +3650,22 @@
         "nswag.generation.aspnetcore.nuspec"
       ]
     },
+    "SixLabors.ImageSharp/3.1.12": {
+      "sha512": "iAg6zifihXEFS/t7fiHhZBGAdCp3FavsF4i2ZIDp0JfeYeDVzvmlbY1CNhhIKimaIzrzSi5M/NBFcWvZT2rB/A==",
+      "type": "package",
+      "path": "sixlabors.imagesharp/3.1.12",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "LICENSE",
+        "build/SixLabors.ImageSharp.props",
+        "lib/net6.0/SixLabors.ImageSharp.dll",
+        "lib/net6.0/SixLabors.ImageSharp.xml",
+        "sixlabors.imagesharp.128.png",
+        "sixlabors.imagesharp.3.1.12.nupkg.sha512",
+        "sixlabors.imagesharp.nuspec"
+      ]
+    },
     "SQLitePCLRaw.bundle_e_sqlite3/2.1.10": {
       "sha512": "UxWuisvZ3uVcVOLJQv7urM/JiQH+v3TmaJc1BLKl5Dxfm/nTzTUrqswCqg/INiYLi61AXnHo1M1JPmPqqLnAdg==",
       "type": "package",
@@ -4175,12 +4235,14 @@
   "projectFileDependencyGroups": {
     "net9.0": [
       "BCrypt.Net-Next >= 4.0.3",
+      "File.TypeChecker >= 4.3.0",
       "Microsoft.AspNetCore.Authentication.JwtBearer >= 9.0.10",
       "Microsoft.AspNetCore.Mvc.NewtonsoftJson >= 9.0.10",
       "Microsoft.AspNetCore.OpenApi >= 9.0.10",
       "Microsoft.EntityFrameworkCore.Design >= 9.0.10",
       "Microsoft.EntityFrameworkCore.Sqlite >= 9.0.10",
       "NSwag.AspNetCore >= 14.6.1",
+      "SixLabors.ImageSharp >= 3.1.12",
       "Swashbuckle.AspNetCore.SwaggerUi >= 9.0.6"
     ]
   },
@@ -4232,6 +4294,10 @@
             "target": "Package",
             "version": "[4.0.3, )"
           },
+          "File.TypeChecker": {
+            "target": "Package",
+            "version": "[4.3.0, )"
+          },
           "Microsoft.AspNetCore.Authentication.JwtBearer": {
             "target": "Package",
             "version": "[9.0.10, )"
@@ -4257,6 +4323,10 @@
           "NSwag.AspNetCore": {
             "target": "Package",
             "version": "[14.6.1, )"
+          },
+          "SixLabors.ImageSharp": {
+            "target": "Package",
+            "version": "[3.1.12, )"
           },
           "Swashbuckle.AspNetCore.SwaggerUi": {
             "target": "Package",
