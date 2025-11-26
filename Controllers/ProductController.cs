@@ -326,7 +326,6 @@ public class ProductController : ControllerBase
 
         if (patchItem == null)
         {
-            Console.WriteLine("beep");
             return BadRequest();
         }
 
