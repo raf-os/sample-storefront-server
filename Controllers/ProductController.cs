@@ -153,6 +153,7 @@ public class ProductController : ControllerBase
             .Where(x => x.Id == id)
             .Include(x => x.ProductCategories)
                 .ThenInclude(x => x.Category)
+            .Include(x => x.Images)
             .Select(x => new ProductDTO(x))
             .SingleOrDefaultAsync();
 
