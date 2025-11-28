@@ -112,6 +112,7 @@ public class ProductController : ControllerBase
         var totalCount = await _db.Products.CountAsync();
         var totalPages = MathF.Ceiling((float)totalCount / (float)_pageSize);
         var query = _db.Products
+            .Include(x => x.Images)
             .AsQueryable();
         
         if (filter.UserId != null)
