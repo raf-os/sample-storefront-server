@@ -10,3 +10,12 @@ public class ImageUpload
     public string? ThumbnailUrl { get; set; }
     public Guid UploaderId { get; set; }
 }
+
+public class ProductImage
+{
+    public Guid ProductId { get; set; }
+    public Product Product { get; set; } = null!;
+
+    public Guid ImageUploadId { get; set; }
+    public ImageUpload ImageUpload { get; set; } = null!;
+}

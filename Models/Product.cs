@@ -32,7 +32,7 @@ public class Product
 
     public ICollection<Comment> Comments { get; set; } = [];
     public ICollection<ProductCategory> ProductCategories { get; set; } = [];
-    public ICollection<ImageUpload> Images { get; set; } = [];
+    public ICollection<ProductImage> ProductImages { get; set; } = [];
 }
 
 public class ProductListItemDTO
@@ -59,8 +59,8 @@ public class ProductListItemDTO
             .Select(pc => new CategoryDTO(pc.Category))
             .ToList();
 
-        if (p.Images != null)
-            ImageIds = p.Images.Select(x => x.Id).ToList();
+        if (p.ProductImages != null)
+            ImageIds = p.ProductImages.Select(x => x.ImageUpload).Select(x => x.Id).ToList();
     }
 }
 
@@ -106,8 +106,8 @@ public class ProductDTO
             Comments = p.Comments.Select(c => new CommentDTO(c)).ToList();
         }
 
-        if (p.Images != null)
-            ImageIds = p.Images.Select(x => x.Id).ToList();
+        if (p.ProductImages != null)
+            ImageIds = p.ProductImages.Select(x => x.ImageUpload).Select(x => x.Id).ToList();
 
         Categories = p.ProductCategories
             .Select(pc => new CategoryDTO(pc.Category))

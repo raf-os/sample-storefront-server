@@ -1,3 +1,4 @@
+using System.Net.NetworkInformation;
 using Microsoft.EntityFrameworkCore;
 using SampleStorefront.Models;
 
@@ -12,6 +13,7 @@ public class AppDbContext : DbContext
     public DbSet<Category> Categories { get; set; }
     public DbSet<ProductCategory> ProductCategories { get; set; }
     public DbSet<ImageUpload> ImageUploads { get; set; }
+    public DbSet<ProductImage> ProductImages{ get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -41,5 +43,19 @@ public class AppDbContext : DbContext
             .HasOne(pc => pc.Category)
             .WithMany(c => c.ProductCategories)
             .HasForeignKey(pc => pc.CategoryId);
+        
+        // Product / image relationships
+        modelBuilder.Entity<ProductImage>()
+            .HasKey(pi => new { pi.ProductId, pi.ImageUploadId });
+
+        modelBuilder.Entity<ProductImage>()
+            .HasOne(pi => pi.Product)
+            .WithMany(p => p.ProductImages)
+            .HasForeignKey(pi => pi.ProductId);
+        
+        modelBuilder.Entity<ProductImage>()
+            .HasOne(pi => pi.ImageUpload)
+            .WithMany()
+            .HasForeignKey(pi => pi.ImageUploadId);
     }
 }

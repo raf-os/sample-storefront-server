@@ -35,6 +35,11 @@ public class ProductController : ControllerBase
         public int Offset { get; set; } = 1;
         public Guid? UserId { get; set; }
     }
+    public class ImagePatchRequest
+    {
+        public List<Guid>? Remove { get; set; }
+        public List<IFormFile>? Uploads { get; set; }
+    }
     private readonly int _pageSize = 10;
     private readonly AppDbContext _db;
     private readonly CategoryService _categoryService;
@@ -112,7 +117,8 @@ public class ProductController : ControllerBase
         var totalCount = await _db.Products.CountAsync();
         var totalPages = MathF.Ceiling((float)totalCount / (float)_pageSize);
         var query = _db.Products
-            .Include(x => x.Images)
+            .Include(x => x.ProductImages)
+                .ThenInclude(pi => pi.ImageUpload)
             .AsQueryable();
         
         if (filter.UserId != null)
@@ -154,7 +160,8 @@ public class ProductController : ControllerBase
             .Where(x => x.Id == id)
             .Include(x => x.ProductCategories)
                 .ThenInclude(x => x.Category)
-            .Include(x => x.Images)
+            .Include(x => x.ProductImages)
+                .ThenInclude(pi => pi.ImageUpload)
             .Select(x => new ProductDTO(x))
             .SingleOrDefaultAsync();
 
@@ -207,8 +214,12 @@ public class ProductController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> NewItem([FromForm] NewProductRequest product)
     {
+        const int MAX_FILES = 7;
         const long maxFileSize = 5 * 1024 * 1024; // 5 MB
         var allowedExtensions = new[] { "PNG", "JPEG", "JPG", "WEBP" };
+
+        if (product.Files != null && product.Files.Count > MAX_FILES)
+            return BadRequest();
 
         var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
         if (!Guid.TryParse(userId, out var userGuid))
@@ -275,7 +286,20 @@ public class ProductController : ControllerBase
         };
 
         if (fileListObj.Count != 0)
-            prod.Images = fileListObj;
+        {
+            var piList = new List<ProductImage>();
+
+            foreach (var fo in fileListObj)
+            {
+                piList.Add(new ProductImage
+                {
+                    ProductId = prod.Id,
+                    ImageUploadId = fo.Id
+                });
+            }
+
+            prod.ProductImages = piList;
+        }
 
         if (categoryIds != null)
         {
@@ -419,6 +443,92 @@ public class ProductController : ControllerBase
 
         var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
         return File(fileStream, "image/webp");
+    }
+
+    [Authorize]
+    [HttpPatch("item/{productId:guid}/image")]
+    public async Task<IActionResult> PatchProductImages(Guid productId, [FromForm] ImagePatchRequest request)
+    {
+        var imageIds = request.Remove;
+        var files = request.Uploads;
+
+        if (imageIds == null && files == null)
+            return BadRequest();
+        else if (
+            (imageIds == null && files != null && files.Count == 0) |
+            (files == null && imageIds != null && imageIds.Count == 0))
+            return BadRequest();
+
+        var productData = await _db.Products
+            .Where(x => x.Id == productId)
+            .Include(x => x.ProductImages)
+                .ThenInclude(pi => pi.ImageUpload)
+            .SingleOrDefaultAsync();
+
+        if (productData == null)
+            return NotFound();
+
+        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)!;
+        if (!Guid.TryParse(userId, out var userGuid))
+            return Unauthorized();
+
+        if (userGuid != productData.UserId)
+            return Unauthorized();
+
+        var imageList = productData.ProductImages;
+
+        // Removing requested images
+        if (imageIds != null)
+        {
+            var piToDelete = imageList.Where(x => imageIds.Contains(x.ImageUploadId)).ToList();
+            var imagesToDelete = piToDelete.Select(x => x.ImageUpload).ToList();
+
+            var dirPath = Path.Combine("Uploads", "Products");
+            Directory.CreateDirectory(dirPath);
+            var thumbPath = Path.Combine("Uploads", "Thumbnails", "Products");
+            Directory.CreateDirectory(thumbPath);
+
+            foreach (var img in imagesToDelete)
+            {
+                var imgId = img.Id.ToString();
+                var filePath = Path.Combine(dirPath, imgId);
+                var thumbFile = Path.Combine(thumbPath, imgId);
+
+                if (Path.Exists(filePath))
+                {
+                    System.IO.File.Delete(filePath);
+                }
+
+                if (Path.Exists(thumbFile))
+                {
+                    System.IO.File.Delete(thumbPath);
+                }
+            }
+
+            _db.ImageUploads.RemoveRange(imagesToDelete);
+            _db.ProductImages.RemoveRange(piToDelete);
+
+            await _db.SaveChangesAsync();
+        }
+
+        // Adding new images
+        if (files != null)
+        {
+            foreach (var file in files)
+            {
+                var imgEntity = await SaveImageToWebp(file, userGuid);
+                _db.ImageUploads.Add(imgEntity);
+                productData.ProductImages.Add(new ProductImage
+                {
+                    ProductId = productData.Id,
+                    ImageUploadId = imgEntity.Id,
+                });
+            }
+        }
+
+        await _db.SaveChangesAsync();
+
+        return Ok();
     }
 
     [HttpGet("thumbnail/{thumbId:guid}")]
