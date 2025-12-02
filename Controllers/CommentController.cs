@@ -46,30 +46,33 @@ public class CommentController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> FetchComments(Guid Id, [Range(0, int.MaxValue)] int Page = 0)
+    public async Task<IActionResult> FetchComments(Guid Id, Guid lastId, DateTime lastDate)
     {
         var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
 
         var query = _db.Comments
-            .Where(x => x.ProductId == Id);
+            .Where(x => x.ProductId == Id)
+            .Include(x => x.User);
 
-        var totalCount = await query.CountAsync();
-        var totalPages = MathF.Ceiling((float)totalCount / (float)_pageSize);
+        // var totalCount = await query.CountAsync();
+        // var totalPages = MathF.Ceiling((float)totalCount / (float)_pageSize);
         bool hasCommented = userId == null
             ? false
             : await query.AnyAsync(c => c.UserId.ToString() == userId);
 
         var comments = await query
             .OrderBy(x => x.PostDate)
-            .Skip(Page * _pageSize)
+            .Where(x => x.PostDate > lastDate || (x.PostDate == lastDate && x.Id != lastId))
             .Take(_pageSize)
-            .Select(x => new CommentDTO(x))
+            .Select(x => new CommentDTO(x).WithUser(x.User))
             .ToListAsync();
 
         if (comments == null)
             return NotFound();
 
-        return Ok(new { comments, totalPages, hasCommented });
+        var isEndOfList = comments.Count < _pageSize;
+
+        return Ok(new { comments, hasCommented, isEndOfList });
     }
 
     [Authorize]

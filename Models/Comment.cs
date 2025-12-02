@@ -21,9 +21,9 @@ public class Comment
     {
         Content = content;
         Score = score;
-        Product = product ?? throw new ArgumentNullException(nameof(product));
+        //Product = product ?? throw new ArgumentNullException(nameof(product));
         ProductId = product.Id;
-        User = user ?? throw new ArgumentNullException(nameof(user));
+        //User = user ?? throw new ArgumentNullException(nameof(user));
         UserId = user.Id;
     }
 }
@@ -35,11 +35,9 @@ public class CommentDTO
     public string? Content { get; set; }
     public float Score { get; set; }
 
-    public Guid ProductId { get; set; }
-    public ProductDTO Product { get; set; } = null!;
+    public ProductDTO? Product { get; set; }
 
-    public Guid UserId { get; set; }
-    public UserPublicDTO User { get; set; } = null!;
+    public UserPublicDTO? User { get; set; }
 
     public CommentDTO() { }
     public CommentDTO(Comment c)
@@ -48,13 +46,17 @@ public class CommentDTO
         PostDate = c.PostDate;
         Content = c.Content;
         Score = c.Score;
+    }
 
-        ProductId = c.ProductId;
-        if (c.Product != null)
-            Product = new ProductDTO(c.Product);
+    public CommentDTO WithUser(User u)
+    {
+        User = new UserPublicDTO(u);
+        return this;
+    }
 
-        UserId = c.UserId;
-        if (c.User != null)
-            User = new UserPublicDTO(c.User);
+    public CommentDTO WithProduct(Product p)
+    {
+        Product = new ProductDTO(p);
+        return this;
     }
 }

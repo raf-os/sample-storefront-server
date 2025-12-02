@@ -46,15 +46,15 @@ public class UserDTO
 
         Role = user.Role;
 
-        if (user.Comments != null)
-        {
-            Comments = user.Comments.Select(c => new CommentDTO(c)).ToList();
-        }
+        // if (user.Comments != null)
+        // {
+        //     Comments = user.Comments.Select(c => new CommentDTO(c)).ToList();
+        // }
 
-        if (user.Products != null)
-        {
-            Products = user.Products.Select(p => new ProductDTO(p)).ToList();
-        }
+        // if (user.Products != null)
+        // {
+        //     Products = user.Products.Select(p => new ProductDTO(p)).ToList();
+        // }
     }
 }
 
@@ -75,15 +75,17 @@ public class UserPublicDTO
         Name = user.Name;
         Role = user.Role;
         SignupDate = user.SignupDate;
+    }
 
-        if (user.Comments != null)
-        {
-            Comments = user.Comments.Select(c => new CommentDTO(c)).ToList();
-        }
+    public UserPublicDTO WithComments(List<Comment> c)
+    {
+        Comments = c.Select(c => new CommentDTO(c)).ToList();
+        return this;
+    }
 
-        if (user.Products != null)
-        {
-            Products = user.Products.Select(p => new ProductDTO(p)).ToList();
-        }
+    public UserPublicDTO WithProducts(List<Product> p)
+    {
+        Products = p.Select(p => new ProductDTO(p)).ToList();
+        return this;
     }
 }
