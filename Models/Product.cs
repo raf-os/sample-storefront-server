@@ -78,7 +78,7 @@ public class ProductDTO
     public List<Guid> ImageIds { get; set; } = [];
 
     public Guid UserId { get; set; }
-    public UserPublicDTO? User { get; set; } = null!;
+    public UserPublicDTO? User { get; set; }
 
     public ICollection<CommentDTO>? Comments { get; set; }
     // public ICollection<ProductCategory> ProductCategories { get; set; } = [];
@@ -97,21 +97,19 @@ public class ProductDTO
         Tags = p.Tags;
         Metadata = p.Metadata;
 
-        UserId = p.UserId;
-        if (p.User != null)
-            User = new UserPublicDTO(p.User);
-
-        if (p.Comments != null)
-        {
-            Comments = p.Comments.Select(c => new CommentDTO(c)).ToList();
-        }
-
         if (p.ProductImages != null)
             ImageIds = p.ProductImages.Select(x => x.ImageUpload).Select(x => x.Id).ToList();
 
         Categories = p.ProductCategories
             .Select(pc => new CategoryDTO(pc.Category))
             .ToList();
+    }
+
+    public ProductDTO WithUser(User u)
+    {
+        User = new UserPublicDTO(u);
+        UserId = User.Id;
+        return this;
     }
 }
 

@@ -158,11 +158,12 @@ public class ProductController : ControllerBase
     {
         var item = await _db.Products
             .Where(x => x.Id == id)
+            .Include(x => x.User)
             .Include(x => x.ProductCategories)
                 .ThenInclude(x => x.Category)
             .Include(x => x.ProductImages)
                 .ThenInclude(pi => pi.ImageUpload)
-            .Select(x => new ProductDTO(x))
+            .Select(x => new ProductDTO(x).WithUser(x.User))
             .SingleOrDefaultAsync();
 
         if (item == null)
@@ -174,41 +175,6 @@ public class ProductController : ControllerBase
             return Ok(item);
         }
     }
-
-    // [HttpGet("item/{id}/comments")]
-    // [ProducesResponseType<List<CommentDTO>>(StatusCodes.Status200OK)]
-    // public async Task<IActionResult> FetchItemComments(Guid id, [FromQuery] [Range(1, int.MaxValue)] int offset = 1)
-    // {
-    //     var query = _db.Comments
-    //         .Where(c => c.ProductId == id)
-    //         .OrderBy(c => c.PostDate)
-    //         .Include(c => c.User)
-    //         .AsQueryable();
-        
-    //     if (offset > 1)
-    //     {
-    //         query = query
-    //             .Skip((offset - 1) * _pageSize)
-    //             .Take(_pageSize);
-    //     }
-        
-    //     var comments = await query
-    //         .Select(c => new CommentDTO
-    //         {
-    //             Id = c.Id,
-    //             PostDate = c.PostDate,
-    //             Content = c.Content,
-    //             Score = c.Score,
-
-    //             ProductId = c.ProductId,
-    //             UserId = c.UserId,
-
-    //             User = new UserPublicDTO(c.User)
-    //         })
-    //         .ToListAsync();
-        
-    //     return Ok(comments);
-    // }
 
     [Authorize]
     [HttpPost]

@@ -15,7 +15,11 @@ var JwtApiKey = builder.Configuration["Jwt:Key"] ?? throw new Exception("Jwt key
 var JwtValidIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new Exception("Jwt issuer is null.");
 var JwtValidAudience = builder.Configuration["Jwt:Audience"] ?? throw new Exception("Jwt audience is null.");
 
-builder.Services.AddControllers().AddNewtonsoftJson();
+builder.Services.AddControllers().AddNewtonsoftJson(opt =>
+{
+    opt.SerializerSettings.NullValueHandling =
+        Newtonsoft.Json.NullValueHandling.Ignore;
+});
 
 builder.Services.AddMemoryCache();
 
