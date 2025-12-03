@@ -24,6 +24,7 @@ public class CommentController : ControllerBase
 
     public async Task<bool> UpdateScore(Product product)
     {
+        // Todo: set this up as a background task or something
         var query = await _db.Comments
             .Where(c => c.ProductId == product.Id)
             .GroupBy(c => c.ProductId)
@@ -48,17 +49,15 @@ public class CommentController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> FetchComments(Guid Id, Guid lastId, DateTime lastDate)
     {
-        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub!);
+        var successfulParse = Guid.TryParse(userId, out var userGuid);
 
         var query = _db.Comments
             .Where(x => x.ProductId == Id)
-            .Include(x => x.User);
+            .Include(x => x.User)
+            .AsQueryable();
 
-        // var totalCount = await query.CountAsync();
-        // var totalPages = MathF.Ceiling((float)totalCount / (float)_pageSize);
-        bool hasCommented = userId == null
-            ? false
-            : await query.AnyAsync(c => c.UserId.ToString() == userId);
+        bool hasCommented = successfulParse == true && await query.AnyAsync(c => c.UserId == userGuid);
 
         var comments = await query
             .OrderBy(x => x.PostDate)
@@ -87,16 +86,25 @@ public class CommentController : ControllerBase
             return BadRequest(new { Message = "Score must be between 0 and 5." });
         }
 
-        var product = await _db.Products.Where(p => p.Id == Id).FirstOrDefaultAsync();
+        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (!Guid.TryParse(userId, out var userGuid))
+            return Unauthorized();
+
+        var query = _db.Products
+            .Where(p => p.Id == Id)
+            .AsQueryable();
+
+        var hasCommented = await query.Include(p => p.Comments).AnyAsync(c => c.UserId == userGuid);
+
+        if (hasCommented == true)
+            return Unauthorized();
+        
+        var product = await query
+            .FirstOrDefaultAsync();
 
         if (product == null)
             return NotFound();
-
-        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (!Guid.TryParse(userId, out var userGuid))
-        {
-            return Unauthorized();
-        }
+        
         var user = await _db.Users.Where(u => u.Id == userGuid).FirstOrDefaultAsync();
         if (user == null || user.IsVerified == false)
             return Unauthorized();

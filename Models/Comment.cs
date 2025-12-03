@@ -37,6 +37,7 @@ public class CommentDTO
 
     public ProductDTO? Product { get; set; }
 
+    public Guid UserId { get; set; }
     public UserPublicDTO? User { get; set; }
 
     public CommentDTO() { }
@@ -51,6 +52,7 @@ public class CommentDTO
     public CommentDTO WithUser(User u)
     {
         User = new UserPublicDTO(u);
+        UserId = User.Id;
         return this;
     }
 
