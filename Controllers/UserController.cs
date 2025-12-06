@@ -14,7 +14,7 @@ public class UserController : ControllerBase
         _db = db;
     }
 
-    [HttpGet("{id:guid}")]
+    [HttpGet("{Id:guid}")]
     [ProducesResponseType<UserPublicDTO>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> FetchUserProfile(Guid Id)
