@@ -9,6 +9,7 @@ public class AppDbContext : DbContext
     public DbSet<Product> Products { get; set; }
     public DbSet<Comment> Comments { get; set; }
     public DbSet<User> Users { get; set; }
+    public DbSet<UserAvatar> UserAvatars { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<Category> Categories { get; set; }
     public DbSet<ProductCategory> ProductCategories { get; set; }
@@ -28,6 +29,12 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Id)
                 .ValueGeneratedOnAdd();
         });
+
+        modelBuilder.Entity<User>()
+            .HasOne(u => u.Avatar)
+            .WithOne(a => a.User)
+            .HasForeignKey<UserAvatar>(a => a.UserId)
+            .IsRequired();
 
         modelBuilder.Entity<ProductCategory>(entity =>
         {

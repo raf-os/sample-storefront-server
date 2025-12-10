@@ -415,6 +415,10 @@ public class ProductController : ControllerBase
     [HttpPatch("item/{productId:guid}/image")]
     public async Task<IActionResult> PatchProductImages(Guid productId, [FromForm] ImagePatchRequest request)
     {
+        const int MAX_FILES = 7;
+        const long maxFileSize = 5 * 1024 * 1024; // 5 MB
+        var allowedExtensions = new[] { "PNG", "JPEG", "JPG", "WEBP" };
+
         var imageIds = request.Remove;
         var files = request.Uploads;
 
@@ -425,6 +429,28 @@ public class ProductController : ControllerBase
             (files == null && imageIds != null && imageIds.Count == 0))
             return BadRequest();
 
+        if (files != null)
+        {
+            foreach (var file in files)
+            {
+                if (file.Length > maxFileSize)
+                    return BadRequest($"File {file.FileName} exceeds maximum allowed size of 5MB.");
+
+                using (var stream = file.OpenReadStream())
+                {
+                    if (!stream.IsImage())
+                        return BadRequest("Only image files are allowed.");
+
+                    var fileType = FileTypeValidator.GetFileType(stream);
+
+                    if (!allowedExtensions.Contains(fileType.Name))
+                        return BadRequest($"Invalid image type for file {file.FileName}.");
+
+                    file.OpenReadStream().Position = 0;
+                }
+            }
+        }
+
         var productData = await _db.Products
             .Where(x => x.Id == productId)
             .Include(x => x.ProductImages)
@@ -433,6 +459,9 @@ public class ProductController : ControllerBase
 
         if (productData == null)
             return NotFound();
+
+        if (files != null && productData.ProductImages.Count + files.Count > MAX_FILES)
+            return BadRequest();
 
         var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)!;
         if (!Guid.TryParse(userId, out var userGuid))
@@ -456,7 +485,7 @@ public class ProductController : ControllerBase
 
             foreach (var img in imagesToDelete)
             {
-                var imgId = img.Id.ToString();
+                var imgId = img.Id.ToString() + ".webp";
                 var filePath = Path.Combine(dirPath, imgId);
                 var thumbFile = Path.Combine(thumbPath, imgId);
 

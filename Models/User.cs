@@ -19,6 +19,7 @@ public class User
 
     public ICollection<Comment> Comments { get; set; } = [];
     public ICollection<Product> Products { get; set; } = [];
+    public UserAvatar? Avatar { get; set; }
 }
 
 // Only the user themselves should ever receive this data
@@ -33,6 +34,7 @@ public class UserDTO
 
     public ICollection<CommentDTO>? Comments { get; set; }
     public ICollection<ProductDTO>? Products { get; set; }
+    public UserAvatar? Avatar { get; set; }
 
     public UserDTO() { }
     public UserDTO(User user)
@@ -45,6 +47,9 @@ public class UserDTO
         IsVerified = user.IsVerified;
 
         Role = user.Role;
+
+        if (user.Avatar != null)
+            Avatar = user.Avatar;
 
         // if (user.Comments != null)
         // {
@@ -67,6 +72,7 @@ public class UserPublicDTO
     public DateTime SignupDate { get; set; }
     public ICollection<CommentDTO>? Comments { get; set; }
     public ICollection<ProductDTO>? Products { get; set; }
+    public UserAvatar? Avatar { get; set; }
 
     public UserPublicDTO() { }
     public UserPublicDTO(User user)
@@ -75,6 +81,9 @@ public class UserPublicDTO
         Name = user.Name;
         Role = user.Role;
         SignupDate = user.SignupDate;
+
+        if (user.Avatar != null)
+            Avatar = user.Avatar;
     }
 
     public UserPublicDTO WithComments(List<Comment> c)
