@@ -12,6 +12,7 @@ using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Formats.Webp;
 using FileTypeChecker.Extensions;
 using FileTypeChecker;
+using Microsoft.Extensions.Options;
 
 namespace SampleStorefront.Controllers;
 
@@ -21,10 +22,14 @@ public class UserController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly PasswordService _passwordService;
-    public UserController(AppDbContext db, PasswordService passwordService)
+    private readonly AuthService _authService;
+    private readonly CookieSettings _cookieSettings;
+    public UserController(AppDbContext db, PasswordService passwordService, AuthService authService, IOptions<CookieSettings> cookieSettings)
     {
         _db = db;
         _passwordService = passwordService;
+        _authService = authService;
+        _cookieSettings = cookieSettings.Value;
     }
     public class UserUpdateSchemaRequest
     {
@@ -187,8 +192,8 @@ public class UserController : ControllerBase
     [HttpPost("update-profile")]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> UpdateUserProfile(UserUpdateSchemaRequest request)
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> UpdateUserProfile([FromBody] UserUpdateSchemaRequest request)
     {
         var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
         if (!Guid.TryParse(userId, out var userGuid))
@@ -206,20 +211,36 @@ public class UserController : ControllerBase
         if (!_passwordService.CheckHashedPassword(oldPassword, user.Password))
             return Unauthorized("Incorrect credentials.");
 
+        if (request.Email != null)
+            user.Email = request.Email;
+
+        AuthService.RefreshTokenResponse? token = null;
+
         if (request.NewPassword != null)
         {
             var hashedPw = _passwordService.HashPassword(request.NewPassword);
             if (hashedPw == null)
                 return BadRequest("Error hashing password. Try a different one.");
             user.Password = hashedPw;
-        }
 
-        if (request.Email != null)
-            user.Email = request.Email;
+            await _authService.InvalidateExistingTokens(user.Id);
+
+            token = await _authService.GenerateRefreshToken(user);
+            if (token == null)
+                return Unauthorized();
+            
+            Response.Cookies.Append("refreshToken", token.RefreshToken, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = _cookieSettings.Secure,
+                SameSite = _cookieSettings.SameSite,
+                Expires = DateTime.UtcNow.AddDays(_cookieSettings.ExpiryDays)
+            });
+        }
 
         await _db.SaveChangesAsync();
 
-        return NoContent();
+        return Ok();
     }
 
     [Authorize]

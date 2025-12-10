@@ -22,9 +22,18 @@ public class ErrorController : ControllerBase
             _logger.LogError(exception, "Unhandled exception");
         }
 
+        var statusCode = exception switch
+        {
+            UnauthorizedAccessException => 401,
+            ArgumentException => 400,
+            KeyNotFoundException => 404,
+            InvalidOperationException => 400,
+            _ => 500
+        };
+
         return Problem(
             detail: exception?.Message,
-            statusCode: 500
+            statusCode: statusCode
         );
     }
 }

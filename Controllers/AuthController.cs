@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using SampleStorefront.Context;
 using SampleStorefront.Models;
 using SampleStorefront.Services;
@@ -14,6 +15,8 @@ public class AuthController : ControllerBase
     private readonly AppDbContext _db;
     private readonly PasswordService _passwordService;
     private readonly JwtTokenService _jwtTokenService;
+    private readonly AuthService _authService;
+    private readonly CookieSettings _cookieSettings;
     public record LoginRequest(string Username, string Password);
     public record RegisterRequest
     {
@@ -27,26 +30,13 @@ public class AuthController : ControllerBase
         public string Email { get; init; } = default!;
     }
 
-    public AuthController(AppDbContext db, PasswordService passwordService, JwtTokenService jwtTokenService)
+    public AuthController(AppDbContext db, PasswordService passwordService, JwtTokenService jwtTokenService, AuthService authService, IOptions<CookieSettings> cookieSettings)
     {
         _db = db;
         _passwordService = passwordService;
         _jwtTokenService = jwtTokenService;
-    }
-
-    private async Task<string> GenerateRefreshToken(Guid userId)
-    {
-        var refreshToken = Guid.NewGuid().ToString();
-        _db.RefreshTokens.Add(new RefreshToken
-        {
-            Token = refreshToken,
-            UserId = userId,
-            ExpiresAt = DateTime.UtcNow.AddDays(30)
-        });
-
-        await _db.SaveChangesAsync();
-
-        return refreshToken;
+        _authService = authService;
+        _cookieSettings = cookieSettings.Value;
     }
 
     [HttpPost("login")]
@@ -69,25 +59,20 @@ public class AuthController : ControllerBase
             return Unauthorized();
         }
 
-        try
-        {
-            var refreshToken = await GenerateRefreshToken(user.Id);
+        var refreshToken = await _authService.GenerateRefreshToken(user);
 
-            Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.None,
-                Expires = DateTime.UtcNow.AddDays(30)
-            });
+        if (refreshToken == null)
+            return Unauthorized();
 
-            var token = _jwtTokenService.GenerateToken(user);
-            return Ok(token);
-        }
-        catch (Exception)
+        Response.Cookies.Append("refreshToken", refreshToken.RefreshToken, new CookieOptions
         {
-            return StatusCode(500);
-        }
+            HttpOnly = true,
+            Secure = _cookieSettings.Secure,
+            SameSite = _cookieSettings.SameSite,
+            Expires = DateTime.UtcNow.AddDays(_cookieSettings.ExpiryDays)
+        });
+
+        return Ok(refreshToken.JWTToken);
     }
 
     [HttpPost("refresh")]

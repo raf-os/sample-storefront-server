@@ -1,6 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
@@ -22,6 +21,11 @@ builder.Services.AddControllers().AddNewtonsoftJson(opt =>
 });
 
 builder.Services.AddMemoryCache();
+
+builder.Services.AddOptions<CookieSettings>()
+    .Bind(builder.Configuration.GetSection("CookieSettings"))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -73,6 +77,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<PasswordService>();
 builder.Services.AddScoped<CategoryService>();
+builder.Services.AddScoped<AuthService>();
 
 JsonWebTokenHandler.DefaultInboundClaimTypeMap.Clear();
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
