@@ -53,6 +53,17 @@ public class UserController : ControllerBase
         public required IFormFile Image { get; set; }
     }
 
+    private async Task<UserAvatar?> GetAvatarObject(Guid userId)
+    {
+        var userAvatar = await _db.Users
+            .Where(x => x.Id == userId)
+            .Include(x => x.Avatar)
+            .Select(x => x.Avatar)
+            .SingleOrDefaultAsync();
+
+        return userAvatar;
+    }
+
     private async Task<string> SaveImageToWebP(IFormFile file)
     {
         // TODO: Move this to a service
@@ -165,6 +176,25 @@ public class UserController : ControllerBase
         return Ok(userDTO);
     }
 
+    [HttpGet("{Id:guid}/avatar")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK, "image/webp")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/json")]
+    public async Task<IActionResult> GetAvatarById(Guid Id)
+    {
+        var avatar = await GetAvatarObject(Id);
+
+        if (avatar == null)
+            return NotFound();
+
+        var filePath = Path.Combine("Uploads", "Profiles", avatar.Url);
+
+        if (!System.IO.File.Exists(filePath))
+            return NotFound();
+
+        var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+        return File(fileStream, "image/webp");
+    }
+
     [Authorize]
     [HttpGet("my-data")]
     [ProducesResponseType<UserDTO>(StatusCodes.Status200OK)]
@@ -240,7 +270,10 @@ public class UserController : ControllerBase
 
         await _db.SaveChangesAsync();
 
-        return Ok();
+        if (token != null)
+            return Ok(new { newToken = token.JWTToken });
+        else
+            return Ok();
     }
 
     [Authorize]
