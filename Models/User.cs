@@ -48,9 +48,6 @@ public class UserDTO
 
         Role = user.Role;
 
-        if (user.Avatar != null)
-            Avatar = user.Avatar;
-
         // if (user.Comments != null)
         // {
         //     Comments = user.Comments.Select(c => new CommentDTO(c)).ToList();
@@ -81,9 +78,6 @@ public class UserPublicDTO
         Name = user.Name;
         Role = user.Role;
         SignupDate = user.SignupDate;
-
-        if (user.Avatar != null)
-            Avatar = user.Avatar;
     }
 
     public UserPublicDTO WithComments(List<Comment> c)

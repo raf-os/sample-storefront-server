@@ -149,6 +149,7 @@ public class UserController : ControllerBase
     public async Task<IActionResult> FetchUserProfile(Guid Id, bool comments = false, bool products = false)
     {
         var query = _db.Users
+            .AsNoTracking()
             .Where(x => x.Id == Id)
             .Include(x => x.Avatar)
             .AsQueryable();
@@ -206,8 +207,8 @@ public class UserController : ControllerBase
             return Unauthorized();
 
         var user = await _db.Users
+            .AsNoTracking()
             .Where(x => x.Id == userGuid)
-            .Include(x => x.Avatar)
             .SingleOrDefaultAsync();
 
         if (user == null)
