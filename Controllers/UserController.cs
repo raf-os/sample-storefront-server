@@ -146,22 +146,20 @@ public class UserController : ControllerBase
     [HttpGet("{Id:guid}")]
     [ProducesResponseType<UserPublicDTO>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> FetchUserProfile(Guid Id, bool comments = false, bool products = false)
+    public async Task<IActionResult> FetchUserProfile(Guid Id, [FromQuery] bool comments = false, [FromQuery] bool products = false)
     {
         var query = _db.Users
-            .AsNoTracking()
             .Where(x => x.Id == Id)
-            .Include(x => x.Avatar)
             .AsQueryable();
 
         if (products == true)
-            query.Include(u => u.Products
-                .OrderBy(x => x.CreationDate)
+            query = query.Include(u => u.Products
+                .OrderByDescending(x => x.CreationDate)
                 .Take(5));
 
         if (comments == true)
-            query.Include(u => u.Comments
-                .OrderBy(x => x.PostDate)
+            query = query.Include(u => u.Comments
+                .OrderByDescending(x => x.PostDate)
                 .Take(5));
 
         var user = await query
@@ -170,9 +168,32 @@ public class UserController : ControllerBase
         if (user == null)
             return NotFound();
 
-        var userDTO = new UserPublicDTO(user)
-            .WithComments([.. user.Comments])
-            .WithProducts([.. user.Products]);
+        var userDTO = new UserPublicDTO(user);
+
+        if (comments == true)
+        {
+            var commentIds = user.Comments.Select(c => c.Id).Distinct().ToList();
+            var uComments = await _db.Comments
+                .Where(x => commentIds.Contains(x.Id))
+                .OrderByDescending(x => x.PostDate)
+                .Include(x => x.Product)
+                .Select(c => new CommentDTO(c))
+                .ToListAsync();
+            userDTO.Comments = uComments;
+        }
+
+        if (products == true)
+        {
+            var productIds = user.Products.Select(p => p.Id).Distinct().ToList();
+            var uProducts = await _db.Products
+                .Where(x => productIds.Contains(x.Id))
+                .OrderByDescending(x => x.CreationDate)
+                .Include(x => x.ProductImages)
+                    .ThenInclude(x => x.ImageUpload)
+                .Select(p => new ProductDTO(p))
+                .ToListAsync();
+            userDTO.Products = uProducts;
+        }
 
         return Ok(userDTO);
     }
@@ -180,7 +201,7 @@ public class UserController : ControllerBase
     [HttpGet("{Id:guid}/avatar")]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK, "image/webp")]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/json")]
-    public async Task<IActionResult> GetAvatarById(Guid Id)
+    public async Task<IActionResult> GetAvatarByUserId(Guid Id)
     {
         var avatar = await GetAvatarObject(Id);
 

@@ -69,7 +69,7 @@ public class UserPublicDTO
     public DateTime SignupDate { get; set; }
     public ICollection<CommentDTO>? Comments { get; set; }
     public ICollection<ProductDTO>? Products { get; set; }
-    public UserAvatar? Avatar { get; set; }
+    public Guid? AvatarId { get; set; }
 
     public UserPublicDTO() { }
     public UserPublicDTO(User user)

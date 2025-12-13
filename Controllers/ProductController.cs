@@ -395,6 +395,8 @@ public class ProductController : ControllerBase
     }
 
     [HttpGet("image/{imageId:guid}")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK, "image/webp")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/json")]
     public async Task<IActionResult> GetImageById(Guid imageId)
     {
         var imageData = await GetImageUploadData(imageId);
@@ -527,6 +529,8 @@ public class ProductController : ControllerBase
     }
 
     [HttpGet("thumbnail/{thumbId:guid}")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK, "image/webp")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/json")]
     public async Task<IActionResult> GetThumbnailById(Guid thumbId)
     {
         var imageData = await GetImageUploadData(thumbId);

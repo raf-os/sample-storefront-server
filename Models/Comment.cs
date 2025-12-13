@@ -35,7 +35,9 @@ public class CommentDTO
     public string? Content { get; set; }
     public float Score { get; set; }
 
+    public Guid? ProductId { get; set; }
     public ProductDTO? Product { get; set; }
+    public string? ProductName { get; set; }
 
     public Guid UserId { get; set; }
     public UserPublicDTO? User { get; set; }
@@ -47,6 +49,11 @@ public class CommentDTO
         PostDate = c.PostDate;
         Content = c.Content;
         Score = c.Score;
+
+        ProductId = c.ProductId;
+
+        if (c.Product != null)
+            ProductName = c.Product.Name;
     }
 
     public CommentDTO WithUser(User u)
