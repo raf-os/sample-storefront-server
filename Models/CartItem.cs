@@ -16,16 +16,16 @@ public class CartItem
     public DateTime AddedAt { get; set; } = DateTime.UtcNow;
 }
 
-// public class CartItemDTO
-// {
-//     public Guid Id { get; set; }
-//     public Guid UserId { get; set; }
-//     public UserDTO? User { get; set; }
+public class CartItemDTO
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public UserDTO? User { get; set; }
 
-//     public Guid ProductId { get; set; }
-//     public ProductListItemDTO? Product { get; set; }
+    public Guid ProductId { get; set; }
+    public ProductListItemDTO? Product { get; set; }
 
-//     public int Quantity { get; set; } = 1;
-//     public DateTime AddedAt { get; set; } = DateTime.UtcNow;
-//     public CartItemDTO() {}
-// }
+    public int Quantity { get; set; } = 1;
+    public DateTime AddedAt { get; set; } = DateTime.UtcNow;
+    public CartItemDTO() {}
+}

@@ -387,99 +387,99 @@ public class UserController : ControllerBase
         return NoContent();
     }
 
-    // [Authorize]
-    // [HttpPut("cart")]
-    // [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    // [ProducesResponseType(StatusCodes.Status404NotFound)]
-    // [ProducesResponseType<string>(StatusCodes.Status200OK)]
-    // public async Task<IActionResult> AddProductToCart([FromQuery] AddProductToCartRequest request)
-    // {
-    //     var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-    //     if (!Guid.TryParse(userId, out var userGuid))
-    //         return Unauthorized();
+    [Authorize]
+    [HttpPut("cart")]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<string>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> AddProductToCart([FromQuery] AddProductToCartRequest request)
+    {
+        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (!Guid.TryParse(userId, out var userGuid))
+            return Unauthorized();
 
-    //     var product = await _db.Products
-    //         .Where(x => x.Id == request.ProductId)
-    //         .SingleOrDefaultAsync();
+        var product = await _db.Products
+            .Where(x => x.Id == request.ProductId)
+            .SingleOrDefaultAsync();
 
-    //     if (product == null)
-    //         return NotFound();
+        if (product == null)
+            return NotFound();
 
-    //     var existingItem = await _db.CartItems
-    //         .Where(x => x.UserId == userGuid && x.ProductId == product.Id)
-    //         .SingleOrDefaultAsync();
+        var existingItem = await _db.CartItems
+            .Where(x => x.UserId == userGuid && x.ProductId == product.Id)
+            .SingleOrDefaultAsync();
 
-    //     if (existingItem == null)
-    //     {
-    //         var newItem = new CartItem
-    //         {
-    //             UserId = userGuid,
-    //             ProductId = product.Id,
-    //             PriceSnapshot = product.Price * (product.Discount ?? 1f),
-    //             Quantity = request.Amount
-    //         };
+        if (existingItem == null)
+        {
+            var newItem = new CartItem
+            {
+                UserId = userGuid,
+                ProductId = product.Id,
+                PriceSnapshot = product.Price * (product.Discount ?? 1f),
+                Quantity = request.Amount
+            };
 
-    //         _db.CartItems.Add(newItem);
+            _db.CartItems.Add(newItem);
 
-    //         await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync();
 
-    //         return Ok($"Successfully added {request.Amount} item(s) of ID {request.ProductId} to cart.");
-    //     }
-    //     else
-    //     {
-    //         existingItem.PriceSnapshot = product.Price * (product.Discount ?? 1f);
-    //         existingItem.Quantity += request.Amount;
+            return Ok($"Successfully added {request.Amount} item(s) of ID {request.ProductId} to cart.");
+        }
+        else
+        {
+            existingItem.PriceSnapshot = product.Price * (product.Discount ?? 1f);
+            existingItem.Quantity += request.Amount;
 
-    //         await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync();
 
-    //         return Ok($"Selected item {request.ProductId} was already in cart. Successfully added {request.Amount} more.");
-    //     }
-    // }
+            return Ok($"Selected item {request.ProductId} was already in cart. Successfully added {request.Amount} more.");
+        }
+    }
 
-    // [Authorize]
-    // [HttpGet("cart")]
-    // [ProducesResponseType<List<CartItemDTO>>(StatusCodes.Status200OK)]
-    // [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    // public async Task<IActionResult> GetCartItems()
-    // {
-    //     var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-    //     if (!Guid.TryParse(userId, out var userGuid))
-    //         return Unauthorized();
+    [Authorize]
+    [HttpGet("cart")]
+    [ProducesResponseType<List<CartItemDTO>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetCartItems()
+    {
+        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (!Guid.TryParse(userId, out var userGuid))
+            return Unauthorized();
 
-    //     var cartItems = await _db.CartItems
-    //         .Where(x => x.UserId == userGuid)
-    //         .Include(x => x.Product)
-    //             .ThenInclude(x => x.ProductImages)
-    //         .Select(x => new CartItemDTO
-    //         {
-    //             Id = x.Id,
-    //             UserId = x.UserId,
+        var cartItems = await _db.CartItems
+            .Where(x => x.UserId == userGuid)
+            .Include(x => x.Product)
+                .ThenInclude(x => x.ProductImages)
+            .Select(x => new CartItemDTO
+            {
+                Id = x.Id,
+                UserId = x.UserId,
 
-    //             ProductId = x.ProductId,
-    //             Product = new ProductListItemDTO(x.Product),
+                ProductId = x.ProductId,
+                Product = new ProductListItemDTO(x.Product),
 
-    //             Quantity = x.Quantity,
-    //             AddedAt = x.AddedAt,
-    //         })
-    //         .ToListAsync();
+                Quantity = x.Quantity,
+                AddedAt = x.AddedAt,
+            })
+            .ToListAsync();
 
-    //     return Ok(cartItems);
-    // }
+        return Ok(cartItems);
+    }
 
-    // [Authorize]
-    // [HttpGet("cart/size")]
-    // [ProducesResponseType<int>(StatusCodes.Status200OK)]
-    // [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    // public async Task<IActionResult> CountCartSize()
-    // {
-    //     var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-    //     if (!Guid.TryParse(userId, out var userGuid))
-    //         return Unauthorized();
+    [Authorize]
+    [HttpGet("cart/size")]
+    [ProducesResponseType<int>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> CountCartSize()
+    {
+        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (!Guid.TryParse(userId, out var userGuid))
+            return Unauthorized();
 
-    //     var itemCount = await _db.CartItems
-    //         .Where(x => x.UserId == userGuid)
-    //         .CountAsync();
+        var itemCount = await _db.CartItems
+            .Where(x => x.UserId == userGuid)
+            .CountAsync();
 
-    //     return Ok(itemCount);
-    // }
+        return Ok(itemCount);
+    }
 }
