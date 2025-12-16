@@ -44,7 +44,8 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<ProductCategory>()
             .HasOne(pc => pc.Product)
             .WithMany(p => p.ProductCategories)
-            .HasForeignKey(pc => pc.ProductId);
+            .HasForeignKey(pc => pc.ProductId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<ProductCategory>()
             .HasOne(pc => pc.Category)
@@ -59,10 +60,30 @@ public class AppDbContext : DbContext
             .HasOne(pi => pi.Product)
             .WithMany(p => p.ProductImages)
             .HasForeignKey(pi => pi.ProductId);
-        
+
         modelBuilder.Entity<ProductImage>()
             .HasOne(pi => pi.ImageUpload)
             .WithMany()
             .HasForeignKey(pi => pi.ImageUploadId);
+
+        // Cart / wishlist relationships
+        modelBuilder.Entity<CartItem>()
+            .HasOne(ci => ci.User)
+            .WithMany(u => u.CartItems)
+            .HasForeignKey(ci => ci.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CartItem>()
+            .HasOne(ci => ci.Product)
+            .WithMany(p => p.CartItems)
+            .HasForeignKey(ci => ci.ProductId);
+
+        modelBuilder.Entity<CartItem>(entity =>
+        {
+            entity.HasIndex(ci => new { ci.UserId, ci.ProductId })
+                .IsUnique();
+                
+            entity.HasIndex(ci => ci.UserId);
+        });
     }
 }

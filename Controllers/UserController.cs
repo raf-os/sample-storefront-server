@@ -13,6 +13,7 @@ using SixLabors.ImageSharp.Formats.Webp;
 using FileTypeChecker.Extensions;
 using FileTypeChecker;
 using Microsoft.Extensions.Options;
+using SampleStorefront.Settings;
 
 namespace SampleStorefront.Controllers;
 

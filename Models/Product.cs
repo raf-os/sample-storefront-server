@@ -33,6 +33,7 @@ public class Product
     public ICollection<Comment> Comments { get; set; } = [];
     public ICollection<ProductCategory> ProductCategories { get; set; } = [];
     public ICollection<ProductImage> ProductImages { get; set; } = [];
+    public ICollection<CartItem> CartItems { get; set; } = [];
 }
 
 public class ProductListItemDTO

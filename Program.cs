@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using SampleStorefront.Context;
 using SampleStorefront.Models;
 using SampleStorefront.Services;
+using SampleStorefront.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
 

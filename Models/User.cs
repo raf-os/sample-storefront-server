@@ -19,6 +19,7 @@ public class User
 
     public ICollection<Comment> Comments { get; set; } = [];
     public ICollection<Product> Products { get; set; } = [];
+    public ICollection<CartItem> CartItems { get; set; } = [];
     public UserAvatar? Avatar { get; set; }
 }
 

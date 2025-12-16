@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace SampleStorefront.Models;
+namespace SampleStorefront.Settings;
 
 public class CookieSettings
 {

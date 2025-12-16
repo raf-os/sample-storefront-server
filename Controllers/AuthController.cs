@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using SampleStorefront.Context;
 using SampleStorefront.Models;
 using SampleStorefront.Services;
+using SampleStorefront.Settings;
 
 namespace SampleStorefront.Controllers;
 
