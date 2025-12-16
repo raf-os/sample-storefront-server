@@ -14,7 +14,8 @@ public class AppDbContext : DbContext
     public DbSet<Category> Categories { get; set; }
     public DbSet<ProductCategory> ProductCategories { get; set; }
     public DbSet<ImageUpload> ImageUploads { get; set; }
-    public DbSet<ProductImage> ProductImages{ get; set; }
+    public DbSet<ProductImage> ProductImages { get; set; }
+    public DbSet<CartItem> CartItems { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -82,7 +83,7 @@ public class AppDbContext : DbContext
         {
             entity.HasIndex(ci => new { ci.UserId, ci.ProductId })
                 .IsUnique();
-                
+
             entity.HasIndex(ci => ci.UserId);
         });
     }

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace SampleStorefront.Models;
 
 public enum UserRole
@@ -16,10 +18,13 @@ public class User
     public DateTime SignupDate { get; set; } = DateTime.UtcNow;
     public bool IsVerified { get; set; } = false;
     public UserRole Role { get; set; } = UserRole.User;
-
+    [JsonIgnore]
     public ICollection<Comment> Comments { get; set; } = [];
+    [JsonIgnore]
     public ICollection<Product> Products { get; set; } = [];
+    [JsonIgnore]
     public ICollection<CartItem> CartItems { get; set; } = [];
+    [JsonIgnore]
     public UserAvatar? Avatar { get; set; }
 }
 
@@ -32,6 +37,7 @@ public class UserDTO
     public UserRole Role { get; set; }
     public DateTime SignupDate { get; set; }
     public bool IsVerified { get; set; }
+    public int CartItemAmount { get; set; } = 0;
 
     public ICollection<CommentDTO>? Comments { get; set; }
     public ICollection<ProductDTO>? Products { get; set; }

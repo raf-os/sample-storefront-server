@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 
 namespace SampleStorefront.Models;
@@ -30,9 +31,13 @@ public class Product
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
 
+    [JsonIgnore]
     public ICollection<Comment> Comments { get; set; } = [];
+    [JsonIgnore]
     public ICollection<ProductCategory> ProductCategories { get; set; } = [];
+    [JsonIgnore]
     public ICollection<ProductImage> ProductImages { get; set; } = [];
+    [JsonIgnore]
     public ICollection<CartItem> CartItems { get; set; } = [];
 }
 
