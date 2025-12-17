@@ -392,7 +392,7 @@ public class UserController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType<string>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> AddProductToCart([FromQuery] AddProductToCartRequest request)
+    public async Task<IActionResult> AddProductToCart([FromBody] AddProductToCartRequest request)
     {
         var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
         if (!Guid.TryParse(userId, out var userGuid))
