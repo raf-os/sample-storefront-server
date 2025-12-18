@@ -440,16 +440,32 @@ public class UserController : ControllerBase
     [HttpGet("cart")]
     [ProducesResponseType<List<CartItemDTO>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetCartItems()
+    public async Task<IActionResult> GetCartItems([FromQuery] [Range(1, int.MaxValue)] int? offset, [FromQuery] bool? isPreview)
     {
         var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
         if (!Guid.TryParse(userId, out var userGuid))
             return Unauthorized();
 
-        var cartItems = await _db.CartItems
+        var query = _db.CartItems
             .Where(x => x.UserId == userGuid)
+            .OrderByDescending(x => x.AddedAt)
             .Include(x => x.Product)
                 .ThenInclude(x => x.ProductImages)
+                    .ThenInclude(x => x.ImageUpload)
+            .AsQueryable();
+        
+        if (isPreview == true)
+        {
+            query = query.Take(5);
+        }
+        else
+        {
+            query = query
+                .Skip(((offset ?? 1) - 1) * 10)
+                .Take(10);
+        }
+
+        var cartItems = await query
             .Select(x => new CartItemDTO
             {
                 Id = x.Id,

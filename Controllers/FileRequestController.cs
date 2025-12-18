@@ -15,6 +15,20 @@ public class FileRequestController : ControllerBase
 
         if (!System.IO.File.Exists(filePath))
             return NotFound();
+
+        var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+        return File(fileStream, "image/webp");
+    }
+    
+    [HttpGet("thumbnails/product/{FileName}")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK, "image/webp")]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/json")]
+    public IActionResult GetProductThumbnailById(string FileName)
+    {
+        var filePath = Path.Combine("Uploads", "Thumbnails", "Products", FileName);
+
+        if (!System.IO.File.Exists(filePath))
+            return NotFound();
         
         var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
         return File(fileStream, "image/webp");

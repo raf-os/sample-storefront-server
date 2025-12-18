@@ -105,8 +105,8 @@ public class ProductController : ControllerBase
             Id = fileGuid,
             Width = finalSize.Width,
             Height = finalSize.Height,
-            Url = filePath,
-            ThumbnailUrl = fileThumbPath,
+            Url = fileName,
+            ThumbnailUrl = fileName,
             UploaderId = userId
         };
     }
@@ -404,7 +404,7 @@ public class ProductController : ControllerBase
         if (imageData == null)
             return NotFound();
 
-        var filePath = imageData.Url;
+        var filePath = Path.Combine("Uploads", "Products", imageData.Url);
 
         if (!System.IO.File.Exists(filePath))
             return NotFound();
@@ -498,7 +498,7 @@ public class ProductController : ControllerBase
 
                 if (Path.Exists(thumbFile))
                 {
-                    System.IO.File.Delete(thumbPath);
+                    System.IO.File.Delete(thumbFile);
                 }
             }
 
@@ -535,10 +535,10 @@ public class ProductController : ControllerBase
     {
         var imageData = await GetImageUploadData(thumbId);
 
-        if (imageData == null)
+        if (imageData == null || imageData.ThumbnailUrl == null)
             return NotFound();
 
-        var filePath = imageData.ThumbnailUrl;
+        var filePath = Path.Combine("Uploads", "Thumbnails", "Products", imageData.ThumbnailUrl);
 
         if (filePath == null)
             return NotFound();

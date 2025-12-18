@@ -50,6 +50,7 @@ public class ProductListItemDTO
     public float? Discount { get; set; }
     public ICollection<CategoryDTO> Categories { get; set; } = [];
     public List<Guid> ImageIds { get; set; } = [];
+    public string? ThumbnailUrl { get; set; }
 
     public ProductListItemDTO() { }
 
@@ -66,7 +67,13 @@ public class ProductListItemDTO
             .ToList();
 
         if (p.ProductImages != null)
+        {
             ImageIds = p.ProductImages.Select(x => x.ImageUpload).Select(x => x.Id).ToList();
+            if (p.ProductImages.Count != 0)
+            {
+                ThumbnailUrl = p.ProductImages.First().ImageUpload.ThumbnailUrl;
+            }
+        }
     }
 }
 
