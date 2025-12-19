@@ -62,6 +62,13 @@ public class UserController : ControllerBase
         public int Amount { get; set; } = 1;
     }
 
+    public class CartDataReturn
+    {
+        public List<CartItemDTO> Items { get; set; } = [];
+        public float TotalCost { get; set; }
+        public float DiscountedCost { get; set; }
+    }
+
     private async Task<UserAvatar?> GetAvatarObject(Guid userId)
     {
         var userAvatar = await _db.Users
@@ -438,7 +445,7 @@ public class UserController : ControllerBase
 
     [Authorize]
     [HttpGet("cart")]
-    [ProducesResponseType<List<CartItemDTO>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<CartDataReturn>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetCartItems([FromQuery] [Range(1, int.MaxValue)] int? offset, [FromQuery] bool? isPreview)
     {
@@ -479,7 +486,22 @@ public class UserController : ControllerBase
             })
             .ToListAsync();
 
-        return Ok(cartItems);
+        var cartPrices = await _db.CartItems
+            .Where(ci => ci.UserId == userGuid)
+            .GroupBy(ci => ci.UserId)
+            .Select(c => new
+            {
+                Total = c.Sum(ci => ci.Product.Price * (float)ci.Quantity),
+                Discounted = c.Sum(ci => ci.Product.Price * ((100f - (ci.Product.Discount ?? 0)) / 100f) * (float)ci.Quantity)
+            })
+            .FirstOrDefaultAsync();
+
+        return Ok(new CartDataReturn
+        {
+            Items = cartItems,
+            TotalCost = cartPrices?.Total ?? 0f,
+            DiscountedCost = cartPrices?.Discounted ?? 0f
+        });
     }
 
     [Authorize]
