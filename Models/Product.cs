@@ -51,6 +51,7 @@ public class ProductListItemDTO
     public ICollection<CategoryDTO> Categories { get; set; } = [];
     public List<Guid> ImageIds { get; set; } = [];
     public string? ThumbnailUrl { get; set; }
+    public bool? IsInCart { get; set; }
 
     public ProductListItemDTO() { }
 
@@ -88,6 +89,7 @@ public class ProductDTO
     public ProductRating Rating { get; set; } = null!;
     public List<string> Tags { get; set; } = [];
     public ProductMetadata Metadata { get; set; } = null!;
+    public bool? IsInCart { get; set; }
     public List<Guid> ImageIds { get; set; } = [];
 
     public Guid UserId { get; set; }

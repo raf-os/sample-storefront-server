@@ -151,19 +151,31 @@ public class ProductController : ControllerBase
         return Ok(new { items = result, totalPages });
     }
 
-    [HttpGet("item/{id}")]
+    [HttpGet("item/{id:guid}")]
     [ProducesResponseType<ProductDTO>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> FetchItem(Guid id)
     {
-        var item = await _db.Products
+        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)!;
+        var isLoggedIn = Guid.TryParse(userId, out var userGuid);
+
+        var query = _db.Products
             .Where(x => x.Id == id)
             .Include(x => x.User)
             .Include(x => x.ProductCategories)
                 .ThenInclude(x => x.Category)
             .Include(x => x.ProductImages)
                 .ThenInclude(pi => pi.ImageUpload)
-            .Select(x => new ProductDTO(x).WithUser(x.User))
+            .AsQueryable();
+        
+        if (isLoggedIn)
+        {
+            query = query
+                .Include(x => x.CartItems
+                    .Where(ci => ci.UserId == userGuid));
+        }
+        
+        var item = await query
             .SingleOrDefaultAsync();
 
         if (item == null)
@@ -172,7 +184,14 @@ public class ProductController : ControllerBase
         }
         else
         {
-            return Ok(item);
+            var itemDto = new ProductDTO(item)
+                .WithUser(item.User);
+            
+            if (item.CartItems != null && item.CartItems.Count != 0)
+            {
+                itemDto.IsInCart = true;
+            }
+            return Ok(itemDto);
         }
     }
 
@@ -311,7 +330,7 @@ public class ProductController : ControllerBase
     }
 
     [Authorize]
-    [HttpPatch("{id:guid}")]
+    [HttpPatch("{Id:guid}")]
     public async Task<IActionResult> UpdateItem(Guid Id, [FromBody] JsonPatchDocument<ProductPatchDTO> request)
     {
         var patchItem = request;

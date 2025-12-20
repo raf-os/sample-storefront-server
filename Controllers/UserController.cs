@@ -520,4 +520,50 @@ public class UserController : ControllerBase
 
         return Ok(itemCount);
     }
+
+    public record ClearUserCartResult
+    {
+        public int DeletedItems { get; init; }
+    }
+
+    [Authorize]
+    [HttpDelete("cart/clear")]
+    [ProducesResponseType<ClearUserCartResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ClearUserCart()
+    {
+        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (!Guid.TryParse(userId, out var userGuid))
+            return Unauthorized();
+
+        var deletedItems = await _db.CartItems
+            .Where(x => x.UserId == userGuid)
+            .ExecuteDeleteAsync();
+
+        return Ok(new ClearUserCartResult
+        {
+            DeletedItems = deletedItems
+        });
+    }
+
+    [Authorize]
+    [HttpDelete("cart/{Id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RemoveItemFromCart(Guid Id)
+    {
+        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (!Guid.TryParse(userId, out var userGuid))
+            return Unauthorized();
+
+        var deletedAmount = await _db.CartItems
+            .Where(x => x.Id == Id && x.UserId == userGuid)
+            .ExecuteDeleteAsync();
+
+        if (deletedAmount == 0)
+            return NotFound();
+        else
+            return NoContent();
+    }
 }
