@@ -28,6 +28,9 @@ public class Product
     public List<string> Tags { get; set; } = [];
     public ProductMetadata Metadata { get; set; } = new ProductMetadata();
 
+    public bool IsInStock { get; set; } = true;
+    public int? StockAmount { get; set; }
+
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
 
@@ -52,6 +55,7 @@ public class ProductListItemDTO
     public List<Guid> ImageIds { get; set; } = [];
     public string? ThumbnailUrl { get; set; }
     public bool? IsInCart { get; set; }
+    public bool IsInStock { get; set; }
 
     public ProductListItemDTO() { }
 
@@ -75,6 +79,8 @@ public class ProductListItemDTO
                 ThumbnailUrl = p.ProductImages.First().ImageUpload.ThumbnailUrl;
             }
         }
+
+        IsInStock = p.IsInStock == true && (p.StockAmount == null || p.StockAmount > 0);
     }
 }
 
@@ -90,6 +96,8 @@ public class ProductDTO
     public List<string> Tags { get; set; } = [];
     public ProductMetadata Metadata { get; set; } = null!;
     public bool? IsInCart { get; set; }
+    public bool IsInStock { get; set; }
+    public int? StockAmount { get; set; }
     public List<Guid> ImageIds { get; set; } = [];
 
     public Guid UserId { get; set; }
@@ -118,6 +126,9 @@ public class ProductDTO
         Categories = p.ProductCategories
             .Select(pc => new CategoryDTO(pc.Category))
             .ToList();
+
+        IsInStock = p.IsInStock == true && (p.StockAmount == null || p.StockAmount > 0);
+        StockAmount = p.StockAmount;
     }
 
     public ProductDTO WithUser(User u)
@@ -135,6 +146,8 @@ public class ProductPatchDTO
     public float? Price { get; set; }
     public float? Discount { get; set; }
     public string? Description { get; set; }
+    public bool? IsInStock { get; set; }
+    public int? StockAmount { get; set; }
     public List<int> Categories { get; set; } = [];
     // public Guid UserId { get; }
 
@@ -146,6 +159,8 @@ public class ProductPatchDTO
         Price = p.Price;
         Discount = p.Discount;
         Description = p.Description;
+        IsInStock = p.IsInStock;
+        StockAmount = p.StockAmount;
         // UserId = p.UserId;
     }
 }

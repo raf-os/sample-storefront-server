@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "kwCDGT2BKYk=",
+  "dgSpecHash": "qhMdTIrvdA0=",
   "success": true,
   "projectFilePath": "/home/rafael/VS Projects/sample-storefront/sample-storefront-server/sample-storefront-server.csproj",
   "expectedPackageFiles": [
@@ -81,7 +81,8 @@
     "/home/rafael/.nuget/packages/system.runtime.compilerservices.unsafe/6.0.0/system.runtime.compilerservices.unsafe.6.0.0.nupkg.sha512",
     "/home/rafael/.nuget/packages/system.text.json/9.0.10/system.text.json.9.0.10.nupkg.sha512",
     "/home/rafael/.nuget/packages/system.threading.channels/7.0.0/system.threading.channels.7.0.0.nupkg.sha512",
-    "/home/rafael/.nuget/packages/yamldotnet/16.3.0/yamldotnet.16.3.0.nupkg.sha512"
+    "/home/rafael/.nuget/packages/yamldotnet/16.3.0/yamldotnet.16.3.0.nupkg.sha512",
+    "/home/rafael/.nuget/packages/microsoft.netcore.app.host.linux-x64/9.0.11/microsoft.netcore.app.host.linux-x64.9.0.11.nupkg.sha512"
   ],
   "logs": []
 }
