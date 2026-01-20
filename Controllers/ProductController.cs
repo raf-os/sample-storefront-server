@@ -35,6 +35,16 @@ public class ProductController : ControllerBase
         public int Offset { get; set; } = 1;
         public Guid? UserId { get; set; }
     }
+    public class PageFetchResult
+    {
+        public class ItemsResult
+        {
+            public ProductListItemDTO Product { get; set; } = null!;
+            public int CommentCount { get; set; }
+        }
+        public List<ItemsResult> Items { get; set; } = null!;
+        public int TotalPages { get; set; }
+    }
     public class ImagePatchRequest
     {
         public List<Guid>? Remove { get; set; }
@@ -112,6 +122,7 @@ public class ProductController : ControllerBase
     }
 
     [HttpGet("page")]
+    [ProducesResponseType<PageFetchResult>(StatusCodes.Status200OK)]
     public async Task<IActionResult> FetchPage([FromQuery] PageFetchFilter filter)
     {
         var totalCount = await _db.Products.CountAsync();
@@ -120,13 +131,13 @@ public class ProductController : ControllerBase
             .Include(x => x.ProductImages)
                 .ThenInclude(pi => pi.ImageUpload)
             .AsQueryable();
-        
+
         if (filter.UserId != null)
         {
             query = query
                 .Where(p => p.UserId == filter.UserId);
         }
-        
+
         if (filter.Category != null)
         {
             query = query
@@ -143,10 +154,10 @@ public class ProductController : ControllerBase
 
         var result = await query
             .Select(x => new
-                {
-                    Product = new ProductListItemDTO(x),
-                    CommentCount = x.Comments.Count()
-                })
+            {
+                Product = new ProductListItemDTO(x),
+                CommentCount = x.Comments.Count()
+            })
             .ToListAsync();
         return Ok(new { items = result, totalPages });
     }
@@ -167,14 +178,14 @@ public class ProductController : ControllerBase
             .Include(x => x.ProductImages)
                 .ThenInclude(pi => pi.ImageUpload)
             .AsQueryable();
-        
+
         if (isLoggedIn)
         {
             query = query
                 .Include(x => x.CartItems
                     .Where(ci => ci.UserId == userGuid));
         }
-        
+
         var item = await query
             .SingleOrDefaultAsync();
 
@@ -186,7 +197,7 @@ public class ProductController : ControllerBase
         {
             var itemDto = new ProductDTO(item)
                 .WithUser(item.User);
-            
+
             if (item.CartItems != null && item.CartItems.Count != 0)
             {
                 itemDto.IsInCart = true;
@@ -219,7 +230,7 @@ public class ProductController : ControllerBase
         }
 
         var fileListObj = new List<ImageUpload>();
-        
+
         if (product.Files != null && product.Files.Count != 0)
         {
             foreach (var file in product.Files)
