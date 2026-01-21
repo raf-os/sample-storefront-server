@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
     public DbSet<ImageUpload> ImageUploads { get; set; }
     public DbSet<ProductImage> ProductImages { get; set; }
     public DbSet<CartItem> CartItems { get; set; }
+    public DbSet<UserMail> UserMails { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -52,7 +53,7 @@ public class AppDbContext : DbContext
             .HasOne(pc => pc.Category)
             .WithMany(c => c.ProductCategories)
             .HasForeignKey(pc => pc.CategoryId);
-        
+
         // Product / image relationships
         modelBuilder.Entity<ProductImage>()
             .HasKey(pi => new { pi.ProductId, pi.ImageUploadId });
