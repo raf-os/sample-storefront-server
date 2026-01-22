@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
     public DbSet<ImageUpload> ImageUploads { get; set; }
     public DbSet<ProductImage> ProductImages { get; set; }
     public DbSet<CartItem> CartItems { get; set; }
+    public DbSet<Mail> Mails { get; set; }
     public DbSet<UserMail> UserMails { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -87,5 +88,19 @@ public class AppDbContext : DbContext
 
             entity.HasIndex(ci => ci.UserId);
         });
+
+        // User / UserMail relationships
+        modelBuilder.Entity<UserMail>()
+            .HasKey(um => new { um.SenderId, um.RecipientId });
+
+        modelBuilder.Entity<UserMail>()
+            .HasOne(um => um.Sender)
+            .WithMany(s => s.SentMail)
+            .HasForeignKey(um => um.SenderId);
+
+        modelBuilder.Entity<UserMail>()
+            .HasOne(um => um.Recipient)
+            .WithMany(r => r.ReceivedMail)
+            .HasForeignKey(um => um.RecipientId);
     }
 }

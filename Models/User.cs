@@ -26,6 +26,10 @@ public class User
     public ICollection<CartItem> CartItems { get; set; } = [];
     [JsonIgnore]
     public UserAvatar? Avatar { get; set; }
+    [JsonIgnore]
+    public ICollection<UserMail> SentMail { get; set; } = [];
+    [JsonIgnore]
+    public ICollection<UserMail> ReceivedMail { get; set; } = [];
 }
 
 // Only the user themselves should ever receive this data
