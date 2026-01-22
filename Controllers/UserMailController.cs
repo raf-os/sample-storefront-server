@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SampleStorefront.Context;
+using SampleStorefront.Models;
 
 namespace SampleStorefront.Controllers;
 
@@ -38,6 +39,10 @@ public class UserMailController : ControllerBase
             .OrderBy(x => x.SendDate)
             .Skip((filter.Offset - 1) * MAX_MAILS_PER_PAGE)
             .Take(MAX_MAILS_PER_PAGE);
+
+        var result = await query
+            .Select(x => new MailDTO(x))
+            .ToListAsync();
 
         return Ok();
     }
