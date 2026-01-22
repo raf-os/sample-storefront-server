@@ -102,5 +102,9 @@ public class AppDbContext : DbContext
             .HasOne(um => um.Recipient)
             .WithMany(r => r.ReceivedMail)
             .HasForeignKey(um => um.RecipientId);
+
+        modelBuilder.Entity<UserMail>()
+            .HasOne(um => um.MailObj)
+            .WithOne(m => m.UserMail);
     }
 }

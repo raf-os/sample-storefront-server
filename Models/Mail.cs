@@ -16,6 +16,8 @@ public class Mail
     public Guid RecipientId { get; set; }
     public User Recipient { get; set; } = default!;
 
+    public UserMail UserMail { get; set; } = default!;
+
     // public List<Guid>? ExtraRecipients { get; set; }
 }
 

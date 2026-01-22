@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SampleStorefront.Context;
 
@@ -10,9 +11,11 @@ using SampleStorefront.Context;
 namespace sample_storefront_server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260122153240_AddMissingPropertiesToUserMailJoinTable")]
+    partial class AddMissingPropertiesToUserMailJoinTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.10");
@@ -326,8 +329,7 @@ namespace sample_storefront_server.Migrations
 
                     b.HasKey("SenderId", "RecipientId");
 
-                    b.HasIndex("MailId")
-                        .IsUnique();
+                    b.HasIndex("MailId");
 
                     b.HasIndex("RecipientId");
 
@@ -504,8 +506,8 @@ namespace sample_storefront_server.Migrations
             modelBuilder.Entity("SampleStorefront.Models.UserMail", b =>
                 {
                     b.HasOne("SampleStorefront.Models.Mail", "MailObj")
-                        .WithOne("UserMail")
-                        .HasForeignKey("SampleStorefront.Models.UserMail", "MailId")
+                        .WithMany()
+                        .HasForeignKey("MailId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -531,12 +533,6 @@ namespace sample_storefront_server.Migrations
             modelBuilder.Entity("SampleStorefront.Models.Category", b =>
                 {
                     b.Navigation("ProductCategories");
-                });
-
-            modelBuilder.Entity("SampleStorefront.Models.Mail", b =>
-                {
-                    b.Navigation("UserMail")
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("SampleStorefront.Models.Product", b =>

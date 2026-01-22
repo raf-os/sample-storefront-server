@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SampleStorefront.Context;
 
 namespace SampleStorefront.Controllers;
@@ -28,15 +29,15 @@ public class UserMailController : ControllerBase
         [FromQuery] UserMailFetchFilter filter
         )
     {
-        var query = _db.UserMails
+        var query = _db.Mails
             .Where(x => x.RecipientId == Id)
-            // .Include(x => x.)
+            .Include(x => x.Sender)
             .AsQueryable();
 
-        // query = query
-        //     .OrderBy(x => x.SendDate)
-        //     .Skip((filter.Offset - 1) * MAX_MAILS_PER_PAGE)
-        //     .Take(MAX_MAILS_PER_PAGE);
+        query = query
+            .OrderBy(x => x.SendDate)
+            .Skip((filter.Offset - 1) * MAX_MAILS_PER_PAGE)
+            .Take(MAX_MAILS_PER_PAGE);
 
         return Ok();
     }
