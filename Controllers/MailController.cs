@@ -10,6 +10,7 @@ using SampleStorefront.Models;
 namespace SampleStorefront.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class MailController : ControllerBase
 {
@@ -34,8 +35,7 @@ public class MailController : ControllerBase
         public required string Content { get; set; }
     }
 
-    [Authorize]
-    [HttpGet("user")]
+    [HttpGet("inbox")]
     [ProducesResponseType<List<MailDTO>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetUserMail(
@@ -51,7 +51,7 @@ public class MailController : ControllerBase
             .AsQueryable();
 
         query = query
-            .OrderBy(x => x.SendDate)
+            .OrderByDescending(x => x.SendDate)
             .Skip((filter.Offset - 1) * MAX_MAILS_PER_PAGE)
             .Take(MAX_MAILS_PER_PAGE);
 
@@ -62,8 +62,27 @@ public class MailController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize]
-    [HttpGet("{Id:guid}")]
+    [HttpGet("inbox/preview")]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<List<MailPreviewDTO>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetUnreadMailPreview()
+    {
+        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (!Guid.TryParse(userId, out var userGuid))
+            return Unauthorized();
+
+        var result = await _db.Mails
+            .Where(x => x.RecipientId == userGuid)
+            .Include(x => x.Sender)
+            .OrderByDescending(x => x.SendDate)
+            .Take(5)
+            .Select(x => new MailPreviewDTO(x))
+            .ToListAsync();
+
+        return Ok(result);
+    }
+
+    [HttpGet("inbox/{Id:guid}")]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType<MailDTO>(StatusCodes.Status200OK)]
@@ -91,7 +110,6 @@ public class MailController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize]
     [HttpPost("send/{Id:guid}")]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -126,5 +144,29 @@ public class MailController : ControllerBase
         await _db.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    [HttpGet("inbox/size")]
+    [ProducesResponseType<int>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetInboxSize(
+        [FromQuery] bool unreadOnly = false
+        )
+    {
+        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (!Guid.TryParse(userId, out var userGuid))
+            return Unauthorized();
+
+        var query = _db.Mails
+            .Where(x => x.RecipientId == userGuid)
+            .AsQueryable();
+
+        if (unreadOnly == true)
+            query = query.Where(x => x.IsRead == false);
+
+        var inboxSize = await query
+            .CountAsync();
+
+        return Ok(inboxSize);
     }
 }
