@@ -21,549 +21,565 @@ namespace SampleStorefront.Controllers;
 [Route("api/[controller]")]
 public class UserController : ControllerBase
 {
-    private readonly AppDbContext _db;
-    private readonly PasswordService _passwordService;
-    private readonly AuthService _authService;
-    private readonly CookieSettings _cookieSettings;
-    public UserController(AppDbContext db, PasswordService passwordService, AuthService authService, IOptions<CookieSettings> cookieSettings)
+  private readonly AppDbContext _db;
+  private readonly PasswordService _passwordService;
+  private readonly AuthService _authService;
+  private readonly CookieSettings _cookieSettings;
+  public UserController(AppDbContext db, PasswordService passwordService, AuthService authService, IOptions<CookieSettings> cookieSettings)
+  {
+    _db = db;
+    _passwordService = passwordService;
+    _authService = authService;
+    _cookieSettings = cookieSettings.Value;
+  }
+  public class UserUpdateSchemaRequest
+  {
+    [Required(ErrorMessage = "Current password is required.")]
+    public required string Password { get; set; }
+
+    [MinLength(4, ErrorMessage = "New password must be at least 4 characters long.")]
+    [MaxLength(40, ErrorMessage = "New password must be at most 40 characters long.")]
+    public string? NewPassword { get; set; }
+
+    [Compare("NewPassword", ErrorMessage = "The new passwords do not match.")]
+    public string? NewPasswordConfirm { get; set; }
+
+    [EmailAddress(ErrorMessage = "Invalid email address.")]
+    public string? Email { get; set; }
+  }
+
+  public class ProfilePicUploadRequest
+  {
+    [Required(ErrorMessage = "A file is required.")]
+    public required IFormFile Image { get; set; }
+  }
+
+  public class AddProductToCartRequest
+  {
+    [Required(ErrorMessage = "You must provide a product's ID.")]
+    public Guid ProductId { get; set; }
+    [Range(1, int.MaxValue)]
+    public int Amount { get; set; } = 1;
+  }
+
+  public class CartDataReturn
+  {
+    public List<CartItemDTO> Items { get; set; } = [];
+    public float TotalCost { get; set; }
+    public float DiscountedCost { get; set; }
+  }
+
+  private async Task<UserAvatar?> GetAvatarObject(Guid userId)
+  {
+    var userAvatar = await _db.Users
+        .Where(x => x.Id == userId)
+        .Include(x => x.Avatar)
+        .Select(x => x.Avatar)
+        .SingleOrDefaultAsync();
+
+    return userAvatar;
+  }
+
+  private async Task<string> SaveImageToWebP(IFormFile file)
+  {
+    // TODO: Move this to a service
+    const long maxFileSize = 5 * 1024 * 1024;
+    var allowedExtensions = new[] { "PNG", "JPEG", "JPG", "WEBP" };
+
+    if (file.Length > maxFileSize)
+      throw new BadHttpRequestException($"File {file.FileName} exceeds maximum allowed size of 5MB.");
+
+    using (var stream = file.OpenReadStream())
     {
-        _db = db;
-        _passwordService = passwordService;
-        _authService = authService;
-        _cookieSettings = cookieSettings.Value;
+      if (!stream.IsImage())
+        throw new BadHttpRequestException("Only image files are allowed.");
+
+      var fileType = FileTypeValidator.GetFileType(stream);
+
+      if (!allowedExtensions.Contains(fileType.Name))
+        throw new BadHttpRequestException($"Invalid image type for file {file.FileName}.");
+
+      file.OpenReadStream().Position = 0;
     }
-    public class UserUpdateSchemaRequest
+
+    Size finalSize = new(0, 0);
+    var dirPath = Path.Combine("Uploads", "Profiles");
+    Directory.CreateDirectory(dirPath);
+    var thumbPath = Path.Combine("Uploads", "Thumbnails", "Profiles");
+    Directory.CreateDirectory(thumbPath);
+
+    var fileGuid = Guid.NewGuid();
+    var fileName = $"{fileGuid}.webp";
+    var filePath = Path.Combine(dirPath, fileName);
+    var fileThumbPath = Path.Combine(thumbPath, fileName);
+
+    using (var image = await Image.LoadAsync(file.OpenReadStream()))
     {
-        [Required(ErrorMessage = "Current password is required.")]
-        public required string Password { get; set; }
+      image.Mutate(x => x.AutoOrient());
 
-        [MinLength(4, ErrorMessage = "New password must be at least 4 characters long.")]
-        [MaxLength(40, ErrorMessage = "New password must be at most 40 characters long.")]
-        public string? NewPassword { get; set; }
-
-        [Compare("NewPassword", ErrorMessage = "The new passwords do not match.")]
-        public string? NewPasswordConfirm { get; set; }
-
-        [EmailAddress(ErrorMessage = "Invalid email address.")]
-        public string? Email { get; set; }
-    }
-
-    public class ProfilePicUploadRequest
-    {
-        [Required(ErrorMessage = "A file is required.")]
-        public required IFormFile Image { get; set; }
-    }
-
-    public class AddProductToCartRequest
-    {
-        [Required(ErrorMessage = "You must provide a product's ID.")]
-        public Guid ProductId { get; set; }
-        [Range(1, int.MaxValue)]
-        public int Amount { get; set; } = 1;
-    }
-
-    public class CartDataReturn
-    {
-        public List<CartItemDTO> Items { get; set; } = [];
-        public float TotalCost { get; set; }
-        public float DiscountedCost { get; set; }
-    }
-
-    private async Task<UserAvatar?> GetAvatarObject(Guid userId)
-    {
-        var userAvatar = await _db.Users
-            .Where(x => x.Id == userId)
-            .Include(x => x.Avatar)
-            .Select(x => x.Avatar)
-            .SingleOrDefaultAsync();
-
-        return userAvatar;
-    }
-
-    private async Task<string> SaveImageToWebP(IFormFile file)
-    {
-        // TODO: Move this to a service
-        const long maxFileSize = 5 * 1024 * 1024;
-        var allowedExtensions = new[] { "PNG", "JPEG", "JPG", "WEBP" };
-
-        if (file.Length > maxFileSize)
-            throw new BadHttpRequestException($"File {file.FileName} exceeds maximum allowed size of 5MB.");
-
-        using (var stream = file.OpenReadStream())
+      if (image.Width > 256 || image.Height > 256)
+      {
+        image.Mutate(x => x.Resize(new ResizeOptions
         {
-            if (!stream.IsImage())
-                throw new BadHttpRequestException("Only image files are allowed.");
+          Size = new Size(256, 256),
+          Mode = ResizeMode.Max
+        }));
+      }
 
-            var fileType = FileTypeValidator.GetFileType(stream);
+      image.Metadata.ExifProfile = null;
 
-            if (!allowedExtensions.Contains(fileType.Name))
-                throw new BadHttpRequestException($"Invalid image type for file {file.FileName}.");
+      var thumbClone = image.Clone(x => x.Resize(new ResizeOptions
+      {
+        Size = new Size(48, 48),
+        Mode = ResizeMode.Max
+      }));
 
-            file.OpenReadStream().Position = 0;
-        }
+      var encoder = new WebpEncoder
+      {
+        Quality = 85,
+        FileFormat = WebpFileFormatType.Lossy
+      };
 
-        Size finalSize = new(0, 0);
-        var dirPath = Path.Combine("Uploads", "Profiles");
-        Directory.CreateDirectory(dirPath);
-        var thumbPath = Path.Combine("Uploads", "Thumbnails", "Profiles");
-        Directory.CreateDirectory(thumbPath);
+      await image.SaveAsync(filePath, encoder);
+      await thumbClone.SaveAsync(fileThumbPath, encoder);
+    }
 
-        var fileGuid = Guid.NewGuid();
-        var fileName = $"{fileGuid}.webp";
-        var filePath = Path.Combine(dirPath, fileName);
-        var fileThumbPath = Path.Combine(thumbPath, fileName);
+    return fileName;
+  }
 
-        using (var image = await Image.LoadAsync(file.OpenReadStream()))
+  private static void DeleteAvatarByName(string imageName)
+  {
+    var filePath = Path.Combine("Uploads", "Profiles", imageName);
+    var thumbPath = Path.Combine("Uploads", "Thumbnails", "Profiles", imageName);
+
+    if (Path.Exists(filePath))
+      System.IO.File.Delete(filePath);
+
+    if (Path.Exists(thumbPath))
+      System.IO.File.Delete(thumbPath);
+  }
+
+  [HttpGet("{Id:guid}")]
+  [ProducesResponseType<UserPublicDTO>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  public async Task<IActionResult> FetchUserProfile(Guid Id, [FromQuery] bool comments = false, [FromQuery] bool products = false)
+  {
+    var query = _db.Users
+        .Where(x => x.Id == Id)
+        .AsQueryable();
+
+    if (products == true)
+      query = query.Include(u => u.Products
+          .OrderByDescending(x => x.CreationDate)
+          .Take(5));
+
+    if (comments == true)
+      query = query.Include(u => u.Comments
+          .OrderByDescending(x => x.PostDate)
+          .Take(5));
+
+    var user = await query
+        .SingleOrDefaultAsync();
+
+    if (user == null)
+      return NotFound();
+
+    var userDTO = new UserPublicDTO(user);
+
+    if (comments == true)
+    {
+      var commentIds = user.Comments.Select(c => c.Id).Distinct().ToList();
+      var uComments = await _db.Comments
+          .Where(x => commentIds.Contains(x.Id))
+          .OrderByDescending(x => x.PostDate)
+          .Include(x => x.Product)
+          .Select(c => new CommentDTO(c))
+          .ToListAsync();
+      userDTO.Comments = uComments;
+    }
+
+    if (products == true)
+    {
+      var productIds = user.Products.Select(p => p.Id).Distinct().ToList();
+      var uProducts = await _db.Products
+          .Where(x => productIds.Contains(x.Id))
+          .OrderByDescending(x => x.CreationDate)
+          .Include(x => x.ProductImages)
+              .ThenInclude(x => x.ImageUpload)
+          .Select(p => new ProductDTO(p))
+          .ToListAsync();
+      userDTO.Products = uProducts;
+    }
+
+    return Ok(userDTO);
+  }
+
+  [HttpGet("{Id:guid}/avatar")]
+  [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK, "image/webp")]
+  [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/json")]
+  public async Task<IActionResult> GetAvatarByUserId(Guid Id)
+  {
+    var avatar = await GetAvatarObject(Id);
+
+    if (avatar == null)
+      return NotFound();
+
+    var filePath = Path.Combine("Uploads", "Profiles", avatar.Url);
+
+    if (!System.IO.File.Exists(filePath))
+      return NotFound();
+
+    var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+    return File(fileStream, "image/webp");
+  }
+
+  [Authorize]
+  [HttpGet("my-data")]
+  [ProducesResponseType<UserDTO>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  public async Task<IActionResult> FetchUserPrivateData()
+  {
+    var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+    if (!Guid.TryParse(userId, out var userGuid))
+      return Unauthorized();
+
+    var user = await _db.Users
+        .AsNoTracking()
+        .Where(x => x.Id == userGuid)
+        .SingleOrDefaultAsync();
+
+    if (user == null)
+      return Unauthorized();
+
+    var userDTO = new UserDTO(user);
+
+    var cartItemAmount = await _db.CartItems
+        .Where(ci => ci.UserId == user.Id)
+        .CountAsync();
+
+    userDTO.CartItemAmount = cartItemAmount;
+
+    return Ok(userDTO);
+  }
+
+  [Authorize]
+  [HttpPost("update-profile")]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  [ProducesResponseType(StatusCodes.Status200OK)]
+  public async Task<IActionResult> UpdateUserProfile([FromBody] UserUpdateSchemaRequest request)
+  {
+    var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+    if (!Guid.TryParse(userId, out var userGuid))
+      return Unauthorized();
+
+    var user = await _db.Users
+        .Where(x => x.Id == userGuid)
+        .FirstOrDefaultAsync();
+
+    if (user == null)
+      return NotFound();
+
+    var oldPassword = request.Password;
+
+    if (!_passwordService.CheckHashedPassword(oldPassword, user.Password))
+      return Unauthorized("Incorrect credentials.");
+
+    if (request.Email != null)
+      user.Email = request.Email;
+
+    AuthService.RefreshTokenResponse? token = null;
+
+    if (request.NewPassword != null)
+    {
+      var hashedPw = _passwordService.HashPassword(request.NewPassword);
+      if (hashedPw == null)
+        return BadRequest("Error hashing password. Try a different one.");
+      user.Password = hashedPw;
+
+      await _authService.InvalidateExistingTokens(user.Id);
+
+      token = await _authService.GenerateRefreshToken(user);
+      if (token == null)
+        return Unauthorized();
+
+      Response.Cookies.Append("refreshToken", token.RefreshToken, new CookieOptions
+      {
+        HttpOnly = true,
+        Secure = _cookieSettings.Secure,
+        SameSite = _cookieSettings.SameSite,
+        Expires = DateTime.UtcNow.AddDays(_cookieSettings.ExpiryDays)
+      });
+    }
+
+    await _db.SaveChangesAsync();
+
+    if (token != null)
+      return Ok(new { newToken = token.JWTToken });
+    else
+      return Ok();
+  }
+
+  [Authorize]
+  [HttpPost("profile-pic")]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status204NoContent)]
+  public async Task<IActionResult> UploadUserProfilePic([FromForm] ProfilePicUploadRequest request)
+  {
+    var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+    if (!Guid.TryParse(userId, out var userGuid))
+      return Unauthorized();
+
+    var user = await _db.Users
+        .Where(x => x.Id == userGuid)
+        .Include(x => x.Avatar)
+        .SingleOrDefaultAsync();
+
+    if (user == null)
+      return Unauthorized();
+
+    var imageFile = request.Image;
+
+    var imageName = await SaveImageToWebP(imageFile);
+
+    var avatar = new UserAvatar
+    {
+      Url = imageName,
+      UserId = userGuid
+    };
+
+    if (user.Avatar != null)
+    {
+      _db.UserAvatars.Remove(user.Avatar);
+      DeleteAvatarByName(user.Avatar.Url);
+    }
+
+    _db.UserAvatars.Add(avatar);
+    user.Avatar = avatar;
+
+    await _db.SaveChangesAsync();
+
+    return NoContent();
+  }
+
+  [Authorize]
+  [HttpDelete("profile-pic")]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  [ProducesResponseType(StatusCodes.Status204NoContent)]
+  public async Task<IActionResult> RemoveProfilePic()
+  {
+    var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+    if (!Guid.TryParse(userId, out var userGuid))
+      return Unauthorized();
+
+    var user = await _db.Users
+        .Where(x => x.Id == userGuid)
+        .Include(x => x.Avatar)
+        .SingleOrDefaultAsync();
+
+    if (user == null)
+      return Unauthorized();
+
+    if (user.Avatar == null)
+      return NoContent();
+
+    _db.UserAvatars.Remove(user.Avatar);
+    DeleteAvatarByName(user.Avatar.Url);
+
+    user.Avatar = null;
+
+    await _db.SaveChangesAsync();
+
+    return NoContent();
+  }
+
+  [Authorize]
+  [HttpPut("cart")]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  [ProducesResponseType<string>(StatusCodes.Status200OK)]
+  public async Task<IActionResult> AddProductToCart([FromBody] AddProductToCartRequest request)
+  {
+    var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+    if (!Guid.TryParse(userId, out var userGuid))
+      return Unauthorized();
+
+    var product = await _db.Products
+        .Where(x => x.Id == request.ProductId)
+        .SingleOrDefaultAsync();
+
+    if (product == null)
+      return NotFound();
+
+    var existingItem = await _db.CartItems
+        .Where(x => x.UserId == userGuid && x.ProductId == product.Id)
+        .SingleOrDefaultAsync();
+
+    if (existingItem == null)
+    {
+      var newItem = new CartItem
+      {
+        UserId = userGuid,
+        ProductId = product.Id,
+        PriceSnapshot = product.Price * (product.Discount ?? 1f),
+        Quantity = request.Amount
+      };
+
+      _db.CartItems.Add(newItem);
+
+      await _db.SaveChangesAsync();
+
+      return Ok($"Successfully added {request.Amount} item(s) of ID {request.ProductId} to cart.");
+    }
+    else
+    {
+      existingItem.PriceSnapshot = product.Price * (product.Discount ?? 1f);
+      existingItem.Quantity += request.Amount;
+
+      await _db.SaveChangesAsync();
+
+      return Ok($"Selected item {request.ProductId} was already in cart. Successfully added {request.Amount} more.");
+    }
+  }
+
+  [Authorize]
+  [HttpGet("cart")]
+  [ProducesResponseType<CartDataReturn>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  public async Task<IActionResult> GetCartItems([FromQuery][Range(1, int.MaxValue)] int? offset, [FromQuery] bool? isPreview)
+  {
+    var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+    if (!Guid.TryParse(userId, out var userGuid))
+      return Unauthorized();
+
+    var query = _db.CartItems
+        .Where(x => x.UserId == userGuid)
+        .OrderByDescending(x => x.AddedAt)
+        .Include(x => x.Product)
+            .ThenInclude(x => x.ProductImages)
+                .ThenInclude(x => x.ImageUpload)
+        .AsQueryable();
+
+    if (isPreview == true)
+    {
+      query = query.Take(5);
+    }
+    else
+    {
+      query = query
+          .Skip(((offset ?? 1) - 1) * 10)
+          .Take(10);
+    }
+
+    var cartItems = await query
+        .Select(x => new CartItemDTO
         {
-            image.Mutate(x => x.AutoOrient());
+          Id = x.Id,
+          UserId = x.UserId,
 
-            if (image.Width > 256 || image.Height > 256)
-            {
-                image.Mutate(x => x.Resize(new ResizeOptions
-                {
-                    Size = new Size(256, 256),
-                    Mode = ResizeMode.Max
-                }));
-            }
+          ProductId = x.ProductId,
+          Product = new ProductListItemDTO(x.Product),
 
-            image.Metadata.ExifProfile = null;
+          Quantity = x.Quantity,
+          AddedAt = x.AddedAt,
+        })
+        .ToListAsync();
 
-            var thumbClone = image.Clone(x => x.Resize(new ResizeOptions
-            {
-                Size = new Size(48, 48),
-                Mode = ResizeMode.Max
-            }));
-
-            var encoder = new WebpEncoder
-            {
-                Quality = 85,
-                FileFormat = WebpFileFormatType.Lossy
-            };
-
-            await image.SaveAsync(filePath, encoder);
-            await thumbClone.SaveAsync(fileThumbPath, encoder);
-        }
-
-        return fileName;
-    }
-    
-    private static void DeleteAvatarByName(string imageName)
-    {
-        var filePath = Path.Combine("Uploads", "Profiles", imageName);
-        var thumbPath = Path.Combine("Uploads", "Thumbnails", "Profiles", imageName);
-
-        if (Path.Exists(filePath))
-            System.IO.File.Delete(filePath);
-        
-        if (Path.Exists(thumbPath))
-            System.IO.File.Delete(thumbPath);
-    }
-
-    [HttpGet("{Id:guid}")]
-    [ProducesResponseType<UserPublicDTO>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> FetchUserProfile(Guid Id, [FromQuery] bool comments = false, [FromQuery] bool products = false)
-    {
-        var query = _db.Users
-            .Where(x => x.Id == Id)
-            .AsQueryable();
-
-        if (products == true)
-            query = query.Include(u => u.Products
-                .OrderByDescending(x => x.CreationDate)
-                .Take(5));
-
-        if (comments == true)
-            query = query.Include(u => u.Comments
-                .OrderByDescending(x => x.PostDate)
-                .Take(5));
-
-        var user = await query
-            .SingleOrDefaultAsync();
-
-        if (user == null)
-            return NotFound();
-
-        var userDTO = new UserPublicDTO(user);
-
-        if (comments == true)
+    var cartPrices = await _db.CartItems
+        .Where(ci => ci.UserId == userGuid)
+        .GroupBy(ci => ci.UserId)
+        .Select(c => new
         {
-            var commentIds = user.Comments.Select(c => c.Id).Distinct().ToList();
-            var uComments = await _db.Comments
-                .Where(x => commentIds.Contains(x.Id))
-                .OrderByDescending(x => x.PostDate)
-                .Include(x => x.Product)
-                .Select(c => new CommentDTO(c))
-                .ToListAsync();
-            userDTO.Comments = uComments;
-        }
+          Total = c.Sum(ci => ci.Product.Price * (float)ci.Quantity),
+          Discounted = c.Sum(ci => ci.Product.Price * ((100f - (ci.Product.Discount ?? 0)) / 100f) * (float)ci.Quantity)
+        })
+        .FirstOrDefaultAsync();
 
-        if (products == true)
-        {
-            var productIds = user.Products.Select(p => p.Id).Distinct().ToList();
-            var uProducts = await _db.Products
-                .Where(x => productIds.Contains(x.Id))
-                .OrderByDescending(x => x.CreationDate)
-                .Include(x => x.ProductImages)
-                    .ThenInclude(x => x.ImageUpload)
-                .Select(p => new ProductDTO(p))
-                .ToListAsync();
-            userDTO.Products = uProducts;
-        }
-
-        return Ok(userDTO);
-    }
-
-    [HttpGet("{Id:guid}/avatar")]
-    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK, "image/webp")]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/json")]
-    public async Task<IActionResult> GetAvatarByUserId(Guid Id)
+    return Ok(new CartDataReturn
     {
-        var avatar = await GetAvatarObject(Id);
+      Items = cartItems,
+      TotalCost = cartPrices?.Total ?? 0f,
+      DiscountedCost = cartPrices?.Discounted ?? 0f
+    });
+  }
 
-        if (avatar == null)
-            return NotFound();
+  [Authorize]
+  [HttpGet("cart/size")]
+  [ProducesResponseType<int>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  public async Task<IActionResult> CountCartSize()
+  {
+    var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+    if (!Guid.TryParse(userId, out var userGuid))
+      return Unauthorized();
 
-        var filePath = Path.Combine("Uploads", "Profiles", avatar.Url);
+    var itemCount = await _db.CartItems
+        .Where(x => x.UserId == userGuid)
+        .CountAsync();
 
-        if (!System.IO.File.Exists(filePath))
-            return NotFound();
+    return Ok(itemCount);
+  }
 
-        var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-        return File(fileStream, "image/webp");
-    }
+  public record ClearUserCartResult
+  {
+    public int DeletedItems { get; init; }
+  }
 
-    [Authorize]
-    [HttpGet("my-data")]
-    [ProducesResponseType<UserDTO>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> FetchUserPrivateData()
+  [Authorize]
+  [HttpDelete("cart/clear")]
+  [ProducesResponseType<ClearUserCartResult>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  public async Task<IActionResult> ClearUserCart()
+  {
+    var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+    if (!Guid.TryParse(userId, out var userGuid))
+      return Unauthorized();
+
+    var deletedItems = await _db.CartItems
+        .Where(x => x.UserId == userGuid)
+        .ExecuteDeleteAsync();
+
+    return Ok(new ClearUserCartResult
     {
-        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (!Guid.TryParse(userId, out var userGuid))
-            return Unauthorized();
+      DeletedItems = deletedItems
+    });
+  }
 
-        var user = await _db.Users
-            .AsNoTracking()
-            .Where(x => x.Id == userGuid)
-            .SingleOrDefaultAsync();
+  [Authorize]
+  [HttpDelete("cart/{Id:guid}")]
+  [ProducesResponseType(StatusCodes.Status204NoContent)]
+  [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  public async Task<IActionResult> RemoveItemFromCart(Guid Id)
+  {
+    var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+    if (!Guid.TryParse(userId, out var userGuid))
+      return Unauthorized();
 
-        if (user == null)
-            return Unauthorized();
+    var deletedAmount = await _db.CartItems
+        .Where(x => x.Id == Id && x.UserId == userGuid)
+        .ExecuteDeleteAsync();
 
-        var userDTO = new UserDTO(user);
+    if (deletedAmount == 0)
+      return NotFound();
+    else
+      return NoContent();
+  }
 
-        var cartItemAmount = await _db.CartItems
-            .Where(ci => ci.UserId == user.Id)
-            .CountAsync();
+  [HttpGet("search")]
+  [ProducesResponseType<List<UserPublicDTO>>(StatusCodes.Status200OK)]
+  public async Task<IActionResult> SearchUsersByName([FromQuery] string username)
+  {
+    if (username.Length < 3)
+      return Ok(new List<UserPublicDTO>());
 
-        userDTO.CartItemAmount = cartItemAmount;
+    var query = await _db.Users
+      .Where(x => EF.Functions.Like(x.Name, $"%{username}%"))
+      .Take(10)
+      .Select(u => new UserPublicDTO(u))
+      .ToListAsync();
 
-        return Ok(userDTO);
-    }
-
-    [Authorize]
-    [HttpPost("update-profile")]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> UpdateUserProfile([FromBody] UserUpdateSchemaRequest request)
-    {
-        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (!Guid.TryParse(userId, out var userGuid))
-            return Unauthorized();
-
-        var user = await _db.Users
-            .Where(x => x.Id == userGuid)
-            .FirstOrDefaultAsync();
-
-        if (user == null)
-            return NotFound();
-
-        var oldPassword = request.Password;
-
-        if (!_passwordService.CheckHashedPassword(oldPassword, user.Password))
-            return Unauthorized("Incorrect credentials.");
-
-        if (request.Email != null)
-            user.Email = request.Email;
-
-        AuthService.RefreshTokenResponse? token = null;
-
-        if (request.NewPassword != null)
-        {
-            var hashedPw = _passwordService.HashPassword(request.NewPassword);
-            if (hashedPw == null)
-                return BadRequest("Error hashing password. Try a different one.");
-            user.Password = hashedPw;
-
-            await _authService.InvalidateExistingTokens(user.Id);
-
-            token = await _authService.GenerateRefreshToken(user);
-            if (token == null)
-                return Unauthorized();
-            
-            Response.Cookies.Append("refreshToken", token.RefreshToken, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = _cookieSettings.Secure,
-                SameSite = _cookieSettings.SameSite,
-                Expires = DateTime.UtcNow.AddDays(_cookieSettings.ExpiryDays)
-            });
-        }
-
-        await _db.SaveChangesAsync();
-
-        if (token != null)
-            return Ok(new { newToken = token.JWTToken });
-        else
-            return Ok();
-    }
-
-    [Authorize]
-    [HttpPost("profile-pic")]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> UploadUserProfilePic([FromForm] ProfilePicUploadRequest request)
-    {
-        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (!Guid.TryParse(userId, out var userGuid))
-            return Unauthorized();
-
-        var user = await _db.Users
-            .Where(x => x.Id == userGuid)
-            .Include(x => x.Avatar)
-            .SingleOrDefaultAsync();
-
-        if (user == null)
-            return Unauthorized();
-
-        var imageFile = request.Image;
-
-        var imageName = await SaveImageToWebP(imageFile);
-
-        var avatar = new UserAvatar
-        {
-            Url = imageName,
-            UserId = userGuid
-        };
-
-        if (user.Avatar != null)
-        {
-            _db.UserAvatars.Remove(user.Avatar);
-            DeleteAvatarByName(user.Avatar.Url);
-        }
-
-        _db.UserAvatars.Add(avatar);
-        user.Avatar = avatar;
-
-        await _db.SaveChangesAsync();
-
-        return NoContent();
-    }
-
-    [Authorize]
-    [HttpDelete("profile-pic")]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> RemoveProfilePic()
-    {
-        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (!Guid.TryParse(userId, out var userGuid))
-            return Unauthorized();
-
-        var user = await _db.Users
-            .Where(x => x.Id == userGuid)
-            .Include(x => x.Avatar)
-            .SingleOrDefaultAsync();
-
-        if (user == null)
-            return Unauthorized();
-
-        if (user.Avatar == null)
-            return NoContent();
-
-        _db.UserAvatars.Remove(user.Avatar);
-        DeleteAvatarByName(user.Avatar.Url);
-
-        user.Avatar = null;
-
-        await _db.SaveChangesAsync();
-
-        return NoContent();
-    }
-
-    [Authorize]
-    [HttpPut("cart")]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType<string>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> AddProductToCart([FromBody] AddProductToCartRequest request)
-    {
-        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (!Guid.TryParse(userId, out var userGuid))
-            return Unauthorized();
-
-        var product = await _db.Products
-            .Where(x => x.Id == request.ProductId)
-            .SingleOrDefaultAsync();
-
-        if (product == null)
-            return NotFound();
-
-        var existingItem = await _db.CartItems
-            .Where(x => x.UserId == userGuid && x.ProductId == product.Id)
-            .SingleOrDefaultAsync();
-
-        if (existingItem == null)
-        {
-            var newItem = new CartItem
-            {
-                UserId = userGuid,
-                ProductId = product.Id,
-                PriceSnapshot = product.Price * (product.Discount ?? 1f),
-                Quantity = request.Amount
-            };
-
-            _db.CartItems.Add(newItem);
-
-            await _db.SaveChangesAsync();
-
-            return Ok($"Successfully added {request.Amount} item(s) of ID {request.ProductId} to cart.");
-        }
-        else
-        {
-            existingItem.PriceSnapshot = product.Price * (product.Discount ?? 1f);
-            existingItem.Quantity += request.Amount;
-
-            await _db.SaveChangesAsync();
-
-            return Ok($"Selected item {request.ProductId} was already in cart. Successfully added {request.Amount} more.");
-        }
-    }
-
-    [Authorize]
-    [HttpGet("cart")]
-    [ProducesResponseType<CartDataReturn>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetCartItems([FromQuery] [Range(1, int.MaxValue)] int? offset, [FromQuery] bool? isPreview)
-    {
-        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (!Guid.TryParse(userId, out var userGuid))
-            return Unauthorized();
-
-        var query = _db.CartItems
-            .Where(x => x.UserId == userGuid)
-            .OrderByDescending(x => x.AddedAt)
-            .Include(x => x.Product)
-                .ThenInclude(x => x.ProductImages)
-                    .ThenInclude(x => x.ImageUpload)
-            .AsQueryable();
-        
-        if (isPreview == true)
-        {
-            query = query.Take(5);
-        }
-        else
-        {
-            query = query
-                .Skip(((offset ?? 1) - 1) * 10)
-                .Take(10);
-        }
-
-        var cartItems = await query
-            .Select(x => new CartItemDTO
-            {
-                Id = x.Id,
-                UserId = x.UserId,
-
-                ProductId = x.ProductId,
-                Product = new ProductListItemDTO(x.Product),
-
-                Quantity = x.Quantity,
-                AddedAt = x.AddedAt,
-            })
-            .ToListAsync();
-
-        var cartPrices = await _db.CartItems
-            .Where(ci => ci.UserId == userGuid)
-            .GroupBy(ci => ci.UserId)
-            .Select(c => new
-            {
-                Total = c.Sum(ci => ci.Product.Price * (float)ci.Quantity),
-                Discounted = c.Sum(ci => ci.Product.Price * ((100f - (ci.Product.Discount ?? 0)) / 100f) * (float)ci.Quantity)
-            })
-            .FirstOrDefaultAsync();
-
-        return Ok(new CartDataReturn
-        {
-            Items = cartItems,
-            TotalCost = cartPrices?.Total ?? 0f,
-            DiscountedCost = cartPrices?.Discounted ?? 0f
-        });
-    }
-
-    [Authorize]
-    [HttpGet("cart/size")]
-    [ProducesResponseType<int>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> CountCartSize()
-    {
-        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (!Guid.TryParse(userId, out var userGuid))
-            return Unauthorized();
-
-        var itemCount = await _db.CartItems
-            .Where(x => x.UserId == userGuid)
-            .CountAsync();
-
-        return Ok(itemCount);
-    }
-
-    public record ClearUserCartResult
-    {
-        public int DeletedItems { get; init; }
-    }
-
-    [Authorize]
-    [HttpDelete("cart/clear")]
-    [ProducesResponseType<ClearUserCartResult>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> ClearUserCart()
-    {
-        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (!Guid.TryParse(userId, out var userGuid))
-            return Unauthorized();
-
-        var deletedItems = await _db.CartItems
-            .Where(x => x.UserId == userGuid)
-            .ExecuteDeleteAsync();
-
-        return Ok(new ClearUserCartResult
-        {
-            DeletedItems = deletedItems
-        });
-    }
-
-    [Authorize]
-    [HttpDelete("cart/{Id:guid}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> RemoveItemFromCart(Guid Id)
-    {
-        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (!Guid.TryParse(userId, out var userGuid))
-            return Unauthorized();
-
-        var deletedAmount = await _db.CartItems
-            .Where(x => x.Id == Id && x.UserId == userGuid)
-            .ExecuteDeleteAsync();
-
-        if (deletedAmount == 0)
-            return NotFound();
-        else
-            return NoContent();
-    }
+    return Ok(query);
+  }
 }

@@ -36,7 +36,7 @@ public class MailController : ControllerBase
     }
 
     [HttpGet("inbox")]
-    [ProducesResponseType<List<MailDTO>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<List<MailPreviewDTO>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetUserMail(
         [FromQuery] UserMailFetchFilter filter)
@@ -56,7 +56,7 @@ public class MailController : ControllerBase
             .Take(MAX_MAILS_PER_PAGE);
 
         var result = await query
-            .Select(x => new MailDTO(x))
+            .Select(x => new MailPreviewDTO(x))
             .ToListAsync();
 
         return Ok(result);
