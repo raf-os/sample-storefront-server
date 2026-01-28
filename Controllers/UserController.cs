@@ -576,6 +576,7 @@ public class UserController : ControllerBase
 
     var query = await _db.Users
       .Where(x => EF.Functions.Like(x.Name, $"%{username}%"))
+      .Include(x => x.Avatar)
       .Take(10)
       .Select(u => new UserPublicDTO(u))
       .ToListAsync();

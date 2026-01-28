@@ -65,6 +65,7 @@ public class MailPreviewDTO
   public DateTime SendDate { get; set; }
   public Guid SenderId { get; set; }
   public string SenderName { get; set; } = "";
+  public string? SenderAvatarUrl { get; set; }
 
   public MailPreviewDTO() { }
   public MailPreviewDTO(Mail mail)
@@ -75,6 +76,10 @@ public class MailPreviewDTO
     SenderId = mail.SenderId;
 
     if (mail.Sender != null)
+    {
       SenderName = mail.Sender.Name;
+      if (mail.Sender.Avatar != null)
+        SenderAvatarUrl = mail.Sender.Avatar.Url;
+    }
   }
 }

@@ -80,7 +80,7 @@ public class UserPublicDTO
   public DateTime SignupDate { get; set; }
   public ICollection<CommentDTO>? Comments { get; set; }
   public ICollection<ProductDTO>? Products { get; set; }
-  public Guid? AvatarId { get; set; }
+  public string? AvatarUrl { get; set; }
 
   public UserPublicDTO() { }
   public UserPublicDTO(User user)
@@ -89,6 +89,11 @@ public class UserPublicDTO
     Name = user.Name;
     Role = user.Role;
     SignupDate = user.SignupDate;
+
+    if (user.Avatar != null)
+    {
+      AvatarUrl = user.Avatar.Url;
+    }
   }
 
   public UserPublicDTO WithComments(List<Comment> c)
