@@ -5,7 +5,7 @@ namespace SampleStorefront.Models;
 public class Comment
 {
   public Guid Id { get; set; } = Guid.NewGuid();
-  public DateTimeOffset PostDate { get; set; } = DateTimeOffset.UtcNow;
+  public DateTime PostDate { get; set; } = DateTime.UtcNow;
 
   public string? Content { get; set; }
   public float Score { get; set; }
@@ -31,7 +31,7 @@ public class Comment
 public class CommentDTO
 {
   public Guid Id { get; set; }
-  public DateTimeOffset PostDate { get; set; }
+  public DateTime PostDate { get; set; }
   public string? Content { get; set; }
   public float Score { get; set; }
 

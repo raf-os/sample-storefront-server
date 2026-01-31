@@ -23,7 +23,7 @@ namespace sample_storefront_server.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset>("AddedAt")
+                    b.Property<DateTime>("AddedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<float>("PriceSnapshot")
@@ -47,7 +47,7 @@ namespace sample_storefront_server.Migrations
                     b.HasIndex("UserId", "ProductId")
                         .IsUnique();
 
-                    b.ToTable("CartItems");
+                    b.ToTable("CartItems", (string)null);
                 });
 
             modelBuilder.Entity("SampleStorefront.Models.Category", b =>
@@ -67,7 +67,7 @@ namespace sample_storefront_server.Migrations
 
                     b.HasIndex("ParentId");
 
-                    b.ToTable("Categories");
+                    b.ToTable("Categories", (string)null);
                 });
 
             modelBuilder.Entity("SampleStorefront.Models.Comment", b =>
@@ -79,7 +79,7 @@ namespace sample_storefront_server.Migrations
                     b.Property<string>("Content")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset>("PostDate")
+                    b.Property<DateTime>("PostDate")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("ProductId")
@@ -97,7 +97,7 @@ namespace sample_storefront_server.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Comments");
+                    b.ToTable("Comments", (string)null);
                 });
 
             modelBuilder.Entity("SampleStorefront.Models.ImageUpload", b =>
@@ -112,7 +112,7 @@ namespace sample_storefront_server.Migrations
                     b.Property<string>("ThumbnailUrl")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset>("UploadDate")
+                    b.Property<DateTime>("UploadDate")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("UploaderId")
@@ -127,7 +127,7 @@ namespace sample_storefront_server.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ImageUploads");
+                    b.ToTable("ImageUploads", (string)null);
                 });
 
             modelBuilder.Entity("SampleStorefront.Models.Mail", b =>
@@ -146,7 +146,7 @@ namespace sample_storefront_server.Migrations
                     b.Property<Guid>("RecipientId")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset>("SendDate")
+                    b.Property<DateTime>("SendDate")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("SenderId")
@@ -161,7 +161,7 @@ namespace sample_storefront_server.Migrations
 
                     b.HasIndex("SenderId");
 
-                    b.ToTable("Mails");
+                    b.ToTable("Mails", (string)null);
                 });
 
             modelBuilder.Entity("SampleStorefront.Models.Product", b =>
@@ -170,7 +170,7 @@ namespace sample_storefront_server.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset>("CreationDate")
+                    b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Description")
@@ -203,7 +203,7 @@ namespace sample_storefront_server.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Products");
+                    b.ToTable("Products", (string)null);
                 });
 
             modelBuilder.Entity("SampleStorefront.Models.ProductCategory", b =>
@@ -218,7 +218,7 @@ namespace sample_storefront_server.Migrations
 
                     b.HasIndex("CategoryId");
 
-                    b.ToTable("ProductCategories");
+                    b.ToTable("ProductCategories", (string)null);
                 });
 
             modelBuilder.Entity("SampleStorefront.Models.ProductImage", b =>
@@ -233,7 +233,7 @@ namespace sample_storefront_server.Migrations
 
                     b.HasIndex("ImageUploadId");
 
-                    b.ToTable("ProductImages");
+                    b.ToTable("ProductImages", (string)null);
                 });
 
             modelBuilder.Entity("SampleStorefront.Models.RefreshToken", b =>
@@ -242,7 +242,7 @@ namespace sample_storefront_server.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTimeOffset>("ExpiresAt")
+                    b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Token")
@@ -254,7 +254,7 @@ namespace sample_storefront_server.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("RefreshTokens");
+                    b.ToTable("RefreshTokens", (string)null);
                 });
 
             modelBuilder.Entity("SampleStorefront.Models.User", b =>
@@ -281,12 +281,12 @@ namespace sample_storefront_server.Migrations
                     b.Property<int>("Role")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTimeOffset>("SignupDate")
+                    b.Property<DateTime>("SignupDate")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("SampleStorefront.Models.UserAvatar", b =>
@@ -295,7 +295,7 @@ namespace sample_storefront_server.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset>("UploadDate")
+                    b.Property<DateTime>("UploadDate")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Url")
@@ -310,7 +310,7 @@ namespace sample_storefront_server.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("UserAvatars");
+                    b.ToTable("UserAvatars", (string)null);
                 });
 
             modelBuilder.Entity("SampleStorefront.Models.UserMail", b =>
@@ -331,7 +331,7 @@ namespace sample_storefront_server.Migrations
 
                     b.HasIndex("RecipientId");
 
-                    b.ToTable("UserMails");
+                    b.ToTable("UserMails", (string)null);
                 });
 
             modelBuilder.Entity("SampleStorefront.Models.CartItem", b =>
@@ -418,7 +418,7 @@ namespace sample_storefront_server.Migrations
 
                             b1.HasKey("ProductId");
 
-                            b1.ToTable("Products");
+                            b1.ToTable("Products", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("ProductId");
@@ -437,7 +437,7 @@ namespace sample_storefront_server.Migrations
 
                             b1.HasKey("ProductId");
 
-                            b1.ToTable("Products");
+                            b1.ToTable("Products", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("ProductId");

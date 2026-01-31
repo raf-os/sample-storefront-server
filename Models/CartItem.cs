@@ -13,7 +13,7 @@ public class CartItem
 
   public int Quantity { get; set; } = 1;
   public float PriceSnapshot { get; set; }
-  public DateTimeOffset AddedAt { get; set; } = DateTimeOffset.UtcNow;
+  public DateTime AddedAt { get; set; } = DateTime.UtcNow;
 }
 
 public class CartItemDTO
@@ -26,6 +26,6 @@ public class CartItemDTO
   public ProductListItemDTO? Product { get; set; }
 
   public int Quantity { get; set; } = 1;
-  public DateTimeOffset AddedAt { get; set; } = DateTimeOffset.UtcNow;
+  public DateTime AddedAt { get; set; } = DateTime.UtcNow;
   public CartItemDTO() { }
 }

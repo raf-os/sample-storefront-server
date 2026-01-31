@@ -15,7 +15,7 @@ public class User
   public required string Name { get; set; }
   public required string Password { get; set; }
   public required string Email { get; set; }
-  public DateTimeOffset SignupDate { get; set; } = DateTimeOffset.UtcNow;
+  public DateTime SignupDate { get; set; } = DateTime.UtcNow;
   public bool IsVerified { get; set; } = false;
   public UserRole Role { get; set; } = UserRole.User;
   [JsonIgnore]
@@ -39,7 +39,7 @@ public class UserDTO
   public string Name { get; set; } = default!;
   public string Email { get; set; } = default!;
   public UserRole Role { get; set; }
-  public DateTimeOffset SignupDate { get; set; }
+  public DateTime SignupDate { get; set; }
   public bool IsVerified { get; set; }
   public int CartItemAmount { get; set; } = 0;
 
@@ -77,7 +77,7 @@ public class UserPublicDTO
   public Guid Id { get; set; }
   public string Name { get; set; } = default!;
   public UserRole Role { get; set; }
-  public DateTimeOffset SignupDate { get; set; }
+  public DateTime SignupDate { get; set; }
   public ICollection<CommentDTO>? Comments { get; set; }
   public ICollection<ProductDTO>? Products { get; set; }
   public string? AvatarUrl { get; set; }

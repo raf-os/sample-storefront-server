@@ -7,7 +7,7 @@ public class Mail
   public Guid Id { get; set; } = Guid.NewGuid();
   public string? Title { get; set; }
   public required string Content { get; set; }
-  public DateTimeOffset SendDate { get; set; } = DateTimeOffset.UtcNow;
+  public DateTime SendDate { get; set; } = DateTime.UtcNow;
   public bool IsRead { get; set; } = false;
 
   public Guid SenderId { get; set; }
@@ -26,7 +26,7 @@ public class MailDTO
   public Guid Id { get; set; }
   public string? Title { get; set; }
   public string Content { get; set; } = null!;
-  public DateTimeOffset SendDate { get; set; }
+  public DateTime SendDate { get; set; }
   public bool IsRead { get; set; }
 
   public Guid SenderId { get; set; }
@@ -62,7 +62,7 @@ public class MailPreviewDTO
 {
   public Guid Id { get; set; }
   public string? Title { get; set; }
-  public DateTimeOffset SendDate { get; set; }
+  public DateTime SendDate { get; set; }
   public Guid SenderId { get; set; }
   public string SenderName { get; set; } = "";
   public string? SenderAvatarUrl { get; set; }
