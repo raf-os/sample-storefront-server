@@ -73,6 +73,7 @@ public class MailController : ControllerBase
 
     var result = await _db.Mails
         .Where(x => x.RecipientId == userGuid)
+        .Where(x => x.IsRead == false)
         .Include(x => x.Sender)
           .ThenInclude(u => u.Avatar)
         .OrderByDescending(x => x.SendDate)
@@ -98,7 +99,6 @@ public class MailController : ControllerBase
     var result = await _db.Mails
         .Where(x => x.Id == Id && x.RecipientId == userGuid)
         .Include(x => x.Sender)
-        .Select(x => new MailDTO(x))
         .SingleOrDefaultAsync();
 
     if (result == null)
@@ -108,7 +108,9 @@ public class MailController : ControllerBase
 
     await _db.SaveChangesAsync();
 
-    return Ok(result);
+    var mailData = new MailDTO(result);
+
+    return Ok(mailData);
   }
 
   [HttpPost("send/{Id:guid}")]
