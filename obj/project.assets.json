@@ -1558,6 +1558,19 @@
           "buildTransitive/net6.0/_._": {}
         }
       },
+      "Tomlyn/0.20.0": {
+        "type": "package",
+        "compile": {
+          "lib/netstandard2.0/Tomlyn.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/netstandard2.0/Tomlyn.dll": {
+            "related": ".xml"
+          }
+        }
+      },
       "YamlDotNet/16.3.0": {
         "type": "package",
         "compile": {
@@ -4208,6 +4221,23 @@
         "useSharedDesignerContext.txt"
       ]
     },
+    "Tomlyn/0.20.0": {
+      "sha512": "Z8TmFcz6oeULVSVGDvbF1h+gnCoy/6NbWrlsQg9f2i+lzqXtUoU4+2RJIm8/s/14uSu0OqTv6JcSngTw3tlkTQ==",
+      "type": "package",
+      "path": "tomlyn/0.20.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/net10.0/Tomlyn.dll",
+        "lib/net10.0/Tomlyn.xml",
+        "lib/netstandard2.0/Tomlyn.dll",
+        "lib/netstandard2.0/Tomlyn.xml",
+        "logo.png",
+        "readme.md",
+        "tomlyn.0.20.0.nupkg.sha512",
+        "tomlyn.nuspec"
+      ]
+    },
     "YamlDotNet/16.3.0": {
       "sha512": "SgMOdxbz8X65z8hraIs6hOEdnkH6hESTAIUa7viEngHOYaH+6q5XJmwr1+yb9vJpNQ19hCQY69xbFsLtXpobQA==",
       "type": "package",
@@ -4243,7 +4273,8 @@
       "Microsoft.EntityFrameworkCore.Sqlite >= 9.0.10",
       "NSwag.AspNetCore >= 14.6.1",
       "SixLabors.ImageSharp >= 3.1.12",
-      "Swashbuckle.AspNetCore.SwaggerUi >= 9.0.6"
+      "Swashbuckle.AspNetCore.SwaggerUi >= 9.0.6",
+      "Tomlyn >= 0.20.0"
     ]
   },
   "packageFolders": {
@@ -4331,6 +4362,10 @@
           "Swashbuckle.AspNetCore.SwaggerUi": {
             "target": "Package",
             "version": "[9.0.6, )"
+          },
+          "Tomlyn": {
+            "target": "Package",
+            "version": "[0.20.0, )"
           }
         },
         "imports": [

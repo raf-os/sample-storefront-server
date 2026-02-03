@@ -17,8 +17,8 @@ var JwtValidAudience = builder.Configuration["Jwt:Audience"] ?? throw new Except
 
 builder.Services.AddControllers().AddNewtonsoftJson(opt =>
 {
-    opt.SerializerSettings.NullValueHandling =
-        Newtonsoft.Json.NullValueHandling.Ignore;
+  opt.SerializerSettings.NullValueHandling =
+      Newtonsoft.Json.NullValueHandling.Ignore;
 });
 
 builder.Services.AddMemoryCache();
@@ -32,47 +32,47 @@ builder.Services.AddOptions<CookieSettings>()
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi(options =>
 {
-    options.ShouldInclude = operation => operation.HttpMethod != null;
+  options.ShouldInclude = operation => operation.HttpMethod != null;
 });
 
 builder.Services.AddDbContext<AppDbContext>();
 
 builder.Services.Configure<FormOptions>(options =>
 {
-    options.MultipartBodyLengthLimit = 10 * 1024 * 1024; // 10 MB
+  options.MultipartBodyLengthLimit = 10 * 1024 * 1024; // 10 MB
 });
 
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(policy =>
-    {
-        policy.WithOrigins("https://localhost:5173")
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
-    });
+  options.AddDefaultPolicy(policy =>
+  {
+    policy.WithOrigins("https://localhost:5173")
+          .AllowAnyHeader()
+          .AllowAnyMethod()
+          .AllowCredentials();
+  });
 });
 
 builder.Services.AddAuthentication().AddJwtBearer(options =>
     {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = JwtValidIssuer,
-            ValidAudience = JwtValidAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtApiKey)),
-            RoleClaimType = "role"
-        };
+      options.TokenValidationParameters = new TokenValidationParameters
+      {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = JwtValidIssuer,
+        ValidAudience = JwtValidAudience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtApiKey)),
+        RoleClaimType = "role"
+      };
     }
 );
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("ModOnly",
-        policy => policy.RequireRole(nameof(UserRole.Operator), nameof(UserRole.Admin)));
+  options.AddPolicy("ModOnly",
+      policy => policy.RequireRole(nameof(UserRole.Operator), nameof(UserRole.Admin)));
 });
 
 
@@ -81,19 +81,23 @@ builder.Services.AddScoped<PasswordService>();
 builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<AuthService>();
 
+builder.Services.AddSingleton<GlobalServerSettings>();
+
 JsonWebTokenHandler.DefaultInboundClaimTypeMap.Clear();
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+
+builder.Services.AddHostedService<ServerConfigService>();
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
-    app.UseSwaggerUi(options =>
-    {
-        options.DocumentPath = "/openapi/v1.json";
-    });
+  app.MapOpenApi();
+  app.UseSwaggerUi(options =>
+  {
+    options.DocumentPath = "/openapi/v1.json";
+  });
 }
 
 app.UseExceptionHandler("/error");
