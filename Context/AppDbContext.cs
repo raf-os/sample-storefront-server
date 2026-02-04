@@ -19,10 +19,13 @@ public class AppDbContext : DbContext
   public DbSet<Mail> Mails { get; set; }
   public DbSet<UserMail> UserMails { get; set; }
 
-  protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-  {
-    optionsBuilder.UseSqlite("Data Source=sqlite/app.db");
-  }
+  // protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+  // {
+  //   optionsBuilder.UseSqlite("Data Source=sqlite/app.db");
+  // }
+
+  public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+  { }
 
   protected override void OnModelCreating(ModelBuilder modelBuilder)
   {

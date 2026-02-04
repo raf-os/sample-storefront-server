@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
@@ -35,7 +36,10 @@ builder.Services.AddOpenApi(options =>
   options.ShouldInclude = operation => operation.HttpMethod != null;
 });
 
-builder.Services.AddDbContext<AppDbContext>();
+builder.Services.AddDbContext<AppDbContext>(options =>
+{
+  options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresqlConnection"));
+});
 
 builder.Services.Configure<FormOptions>(options =>
 {
