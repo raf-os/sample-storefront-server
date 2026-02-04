@@ -15,6 +15,38 @@ public class ServerConfigService : IHostedService
     _serviceProvider = serviceProvider;
   }
 
+  private static async Task<User> CreateBotAccount(AppConfig appConfig, PasswordService pwContext, AppDbContext dbContext, string filePath, CancellationToken cancellationToken)
+  {
+    string botPassword = appConfig.BotConfig?.Password ?? "1234";
+    string botEmail = appConfig.BotConfig?.Mail ?? "bot@skynet.com";
+
+    var botUser = new User
+    {
+      Name = "SystemBot",
+      Password = pwContext.HashPassword(botPassword) ?? "ERROR_HASHING",
+      Email = botEmail,
+    };
+
+    dbContext.Users.Add(botUser);
+
+    await dbContext.SaveChangesAsync(cancellationToken);
+
+    var botId = botUser.Id;
+    appConfig.BotConfig = new BotConfigTable
+    {
+      Uid = botId.ToString(),
+      Password = botPassword,
+      Mail = botEmail
+    };
+
+    var tomlOut = Toml.FromModel(appConfig);
+    File.WriteAllText(filePath, tomlOut);
+
+    Console.WriteLine("Successfully created bot account.");
+    return botUser;
+  }
+
+
   public async Task StartAsync(CancellationToken cancellationToken)
   {
     using var scope = _serviceProvider.CreateScope();
@@ -40,33 +72,7 @@ public class ServerConfigService : IHostedService
 
     if (appConfig.BotConfig == null || appConfig.BotConfig.Uid == null)
     {
-      // No configured bot account
-      string botPassword = appConfig.BotConfig?.Password ?? "1234";
-      string botEmail = appConfig.BotConfig?.Mail ?? "bot@skynet.com";
-
-      var botUser = new User
-      {
-        Name = "SystemBot",
-        Password = pwContext.HashPassword(botPassword) ?? "ERROR_HASHING",
-        Email = botEmail,
-      };
-
-      dbContext.Users.Add(botUser);
-
-      await dbContext.SaveChangesAsync(cancellationToken);
-
-      var botId = botUser.Id;
-      appConfig.BotConfig = new BotConfigTable
-      {
-        Uid = botId.ToString(),
-        Password = botPassword,
-        Mail = botEmail
-      };
-
-      var tomlOut = Toml.FromModel(appConfig);
-      File.WriteAllText(filePath, tomlOut);
-
-      Console.WriteLine("Successfully created bot account.");
+      await CreateBotAccount(appConfig, pwContext, dbContext, filePath, cancellationToken);
     }
     else
     {
@@ -75,8 +81,11 @@ public class ServerConfigService : IHostedService
       var botAccount = await dbContext.Users
         .AnyAsync(x => x.Id == botGuid, cancellationToken);
       if (botAccount == false)
-        throw new ArgumentException($"Invalid Bot ID provided in config file {filePath}");
-
+      {
+        Console.WriteLine("Invalid system bot account ID. Creating new one...");
+        var botUser = await CreateBotAccount(appConfig, pwContext, dbContext, filePath, cancellationToken);
+        botGuid = botUser.Id;
+      }
       serverSettings.BotAccountId = botGuid;
     }
   }
