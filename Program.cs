@@ -39,6 +39,37 @@ builder.Services.AddOpenApi(options =>
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
   options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresqlConnection"));
+  options.UseSeeding((context, _) =>
+  {
+    var testUser = context.Set<User>().FirstOrDefault(x => x.Name == "Admin");
+    if (testUser == null)
+    {
+      var hashedPassword = BCrypt.Net.BCrypt.HashPassword("1234");
+      var baseAdminUser = new User
+      {
+        Name = "Admin",
+        Email = "admin@internet.com",
+        Password = hashedPassword
+      };
+      context.Set<User>().Add(baseAdminUser);
+      context.SaveChanges();
+    }
+  });
+  options.UseAsyncSeeding(async (context, _, cancellationToken) =>
+  {
+    var testUser = await context.Set<User>().FirstOrDefaultAsync(x => x.Name == "Admin", cancellationToken);
+    {
+      var hashedPassword = BCrypt.Net.BCrypt.HashPassword("1234");
+      var baseAdminUser = new User
+      {
+        Name = "Admin",
+        Email = "admin@internet.com",
+        Password = hashedPassword
+      };
+      context.Set<User>().Add(baseAdminUser);
+      await context.SaveChangesAsync(cancellationToken);
+    }
+  });
 });
 
 builder.Services.Configure<FormOptions>(options =>
