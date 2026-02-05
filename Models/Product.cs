@@ -19,7 +19,7 @@ public class ProductMetadata
 public class Product
 {
   public Guid Id { get; set; } = Guid.NewGuid();
-  public DateTime CreationDate { get; set; } = DateTime.UtcNow;
+  public DateTimeOffset CreationDate { get; set; } = DateTimeOffset.UtcNow;
   public required string Name { get; set; }
   public required float Price { get; set; }
   public float? Discount { get; set; }
@@ -47,7 +47,7 @@ public class Product
 public class ProductListItemDTO
 {
   public Guid Id { get; set; }
-  public DateTime CreationDate { get; set; }
+  public DateTimeOffset CreationDate { get; set; }
   public string Name { get; set; } = null!;
   public float Price { get; set; }
   public float? Discount { get; set; }
@@ -87,7 +87,7 @@ public class ProductListItemDTO
 public class ProductDTO
 {
   public Guid Id { get; set; }
-  public DateTime CreationDate { get; set; }
+  public DateTimeOffset CreationDate { get; set; }
   public string Name { get; set; } = default!;
   public float Price { get; set; }
   public float? Discount { get; set; }
