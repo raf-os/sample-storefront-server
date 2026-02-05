@@ -49,7 +49,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
       {
         Name = "Admin",
         Email = "admin@internet.com",
-        Password = hashedPassword
+        Password = hashedPassword,
+        IsVerified = true
       };
       context.Set<User>().Add(baseAdminUser);
       context.SaveChanges();
@@ -58,13 +59,15 @@ builder.Services.AddDbContext<AppDbContext>(options =>
   options.UseAsyncSeeding(async (context, _, cancellationToken) =>
   {
     var testUser = await context.Set<User>().FirstOrDefaultAsync(x => x.Name == "Admin", cancellationToken);
+    if (testUser == null)
     {
       var hashedPassword = BCrypt.Net.BCrypt.HashPassword("1234");
       var baseAdminUser = new User
       {
         Name = "Admin",
         Email = "admin@internet.com",
-        Password = hashedPassword
+        Password = hashedPassword,
+        IsVerified = true
       };
       context.Set<User>().Add(baseAdminUser);
       await context.SaveChangesAsync(cancellationToken);

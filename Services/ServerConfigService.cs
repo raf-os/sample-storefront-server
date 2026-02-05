@@ -25,6 +25,7 @@ public class ServerConfigService : IHostedService
       Name = "SystemBot",
       Password = pwContext.HashPassword(botPassword) ?? "ERROR_HASHING",
       Email = botEmail,
+      IsVerified = true
     };
 
     dbContext.Users.Add(botUser);
