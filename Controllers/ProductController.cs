@@ -3,7 +3,6 @@ using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.EntityFrameworkCore;
 using FileTypeChecker;
 using SampleStorefront.Context;
@@ -13,6 +12,7 @@ using FileTypeChecker.Extensions;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Formats.Webp;
+using SystemTextJsonPatch;
 
 namespace SampleStorefront.Controllers;
 
@@ -20,563 +20,563 @@ namespace SampleStorefront.Controllers;
 [Route("api/[controller]")]
 public class ProductController : ControllerBase
 {
-    public class NewProductRequest
+  public class NewProductRequest
+  {
+    public required string Name { get; set; }
+    public required float Price { get; set; }
+    public string? Description { get; set; }
+    public List<int>? Categories { get; set; }
+    public List<IFormFile>? Files { get; set; }
+  }
+  public class PageFetchFilter
+  {
+    public int? Category { get; set; }
+    [Range(1, int.MaxValue)]
+    public int Offset { get; set; } = 1;
+    public Guid? UserId { get; set; }
+  }
+  public class PageFetchResult
+  {
+    public class ItemsResult
     {
-        public required string Name { get; set; }
-        public required float Price { get; set; }
-        public string? Description { get; set; }
-        public List<int>? Categories { get; set; }
-        public List<IFormFile>? Files { get; set; }
+      public ProductListItemDTO Product { get; set; } = null!;
+      public int CommentCount { get; set; }
     }
-    public class PageFetchFilter
+    public List<ItemsResult> Items { get; set; } = null!;
+    public int TotalPages { get; set; }
+  }
+  public class ImagePatchRequest
+  {
+    public List<Guid>? Remove { get; set; }
+    public List<IFormFile>? Uploads { get; set; }
+  }
+  private readonly int _pageSize = 10;
+  private readonly AppDbContext _db;
+  private readonly CategoryService _categoryService;
+  public ProductController(AppDbContext db, CategoryService categoryService)
+  {
+    _db = db;
+    _categoryService = categoryService;
+  }
+  public class UpdateItemRequest
+  {
+    public required JsonPatchDocument<ProductPatchDTO> PatchItem { get; set; }
+    public List<int>? Categories { get; set; } = [];
+  }
+
+  private static async Task<ImageUpload> SaveImageToWebp(IFormFile file, Guid userId)
+  {
+    Size finalSize = new(0, 0);
+    var dirPath = Path.Combine("Uploads", "Products");
+    Directory.CreateDirectory(dirPath);
+    var thumbPath = Path.Combine("Uploads", "Thumbnails", "Products");
+    Directory.CreateDirectory(thumbPath);
+
+    var fileGuid = Guid.NewGuid();
+    var fileName = $"{fileGuid}.webp";
+    var filePath = Path.Combine(dirPath, fileName);
+    var fileThumbPath = Path.Combine(thumbPath, fileName);
+
+    using (var image = await Image.LoadAsync(file.OpenReadStream()))
     {
-        public int? Category { get; set; }
-        [Range(1, int.MaxValue)]
-        public int Offset { get; set; } = 1;
-        public Guid? UserId { get; set; }
-    }
-    public class PageFetchResult
-    {
-        public class ItemsResult
+      image.Mutate(x => x.AutoOrient());
+
+      if (image.Width > 1920 || image.Height > 1920)
+      {
+        image.Mutate(x => x.Resize(new ResizeOptions
         {
-            public ProductListItemDTO Product { get; set; } = null!;
-            public int CommentCount { get; set; }
+          Size = new Size(1920, 1920),
+          Mode = ResizeMode.Max
+        }));
+      }
+
+      image.Metadata.ExifProfile = null;
+
+      var thumbClone = image.Clone(x => x.Resize(new ResizeOptions
+      {
+        Size = new Size(256, 256),
+        Mode = ResizeMode.Max
+      }));
+
+      var encoder = new WebpEncoder
+      {
+        Quality = 85,
+        FileFormat = WebpFileFormatType.Lossy
+      };
+
+      finalSize = new Size(image.Width, image.Height);
+
+      await image.SaveAsync(filePath, encoder);
+      await thumbClone.SaveAsync(fileThumbPath, encoder);
+    }
+
+    return new ImageUpload
+    {
+      Id = fileGuid,
+      Width = finalSize.Width,
+      Height = finalSize.Height,
+      Url = fileName,
+      ThumbnailUrl = fileName,
+      UploaderId = userId
+    };
+  }
+
+  [HttpGet("page")]
+  [ProducesResponseType<PageFetchResult>(StatusCodes.Status200OK)]
+  public async Task<IActionResult> FetchPage([FromQuery] PageFetchFilter filter)
+  {
+    var totalCount = await _db.Products.CountAsync();
+    var totalPages = MathF.Ceiling((float)totalCount / (float)_pageSize);
+    var query = _db.Products
+        .Include(x => x.ProductImages)
+            .ThenInclude(pi => pi.ImageUpload)
+        .AsQueryable();
+
+    if (filter.UserId != null)
+    {
+      query = query
+          .Where(p => p.UserId == filter.UserId);
+    }
+
+    if (filter.Category != null)
+    {
+      query = query
+          .Include(p => p.ProductCategories)
+              .ThenInclude(pc => pc.Category)
+          .Where(p => p.ProductCategories
+              .Any(pc => pc.CategoryId == filter.Category));
+    }
+
+    query = query
+        .OrderBy(x => x.CreationDate)
+        .Skip((filter.Offset - 1) * _pageSize)
+        .Take(_pageSize);
+
+    var result = await query
+        .Select(x => new
+        {
+          Product = new ProductListItemDTO(x),
+          CommentCount = x.Comments.Count()
+        })
+        .ToListAsync();
+    return Ok(new { items = result, totalPages });
+  }
+
+  [HttpGet("item/{id:guid}")]
+  [ProducesResponseType<ProductDTO>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  public async Task<IActionResult> FetchItem(Guid id)
+  {
+    var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)!;
+    var isLoggedIn = Guid.TryParse(userId, out var userGuid);
+
+    var query = _db.Products
+        .Where(x => x.Id == id)
+        .Include(x => x.User)
+        .Include(x => x.ProductCategories)
+            .ThenInclude(x => x.Category)
+        .Include(x => x.ProductImages)
+            .ThenInclude(pi => pi.ImageUpload)
+        .AsQueryable();
+
+    if (isLoggedIn)
+    {
+      query = query
+          .Include(x => x.CartItems
+              .Where(ci => ci.UserId == userGuid));
+    }
+
+    var item = await query
+        .SingleOrDefaultAsync();
+
+    if (item == null)
+    {
+      return NotFound();
+    }
+    else
+    {
+      var itemDto = new ProductDTO(item)
+          .WithUser(item.User);
+
+      if (item.CartItems != null && item.CartItems.Count != 0)
+      {
+        itemDto.IsInCart = true;
+      }
+      return Ok(itemDto);
+    }
+  }
+
+  [Authorize]
+  [HttpPost]
+  public async Task<IActionResult> NewItem([FromForm] NewProductRequest product)
+  {
+    const int MAX_FILES = 7;
+    const long maxFileSize = 5 * 1024 * 1024; // 5 MB
+    var allowedExtensions = new[] { "PNG", "JPEG", "JPG", "WEBP" };
+
+    if (product.Files != null && product.Files.Count > MAX_FILES)
+      return BadRequest();
+
+    var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+    if (!Guid.TryParse(userId, out var userGuid))
+    {
+      return Unauthorized();
+    }
+    var user = await _db.Users.Where(u => u.Id == userGuid).SingleOrDefaultAsync();
+    if (user == null || user.IsVerified == false)
+    {
+
+      return Unauthorized();
+    }
+
+    var fileListObj = new List<ImageUpload>();
+
+    if (product.Files != null && product.Files.Count != 0)
+    {
+      foreach (var file in product.Files)
+      {
+        if (file.Length > maxFileSize)
+        {
+          return BadRequest($"File {file.FileName} exceeds maximum allowed size of 5MB.");
         }
-        public List<ItemsResult> Items { get; set; } = null!;
-        public int TotalPages { get; set; }
-    }
-    public class ImagePatchRequest
-    {
-        public List<Guid>? Remove { get; set; }
-        public List<IFormFile>? Uploads { get; set; }
-    }
-    private readonly int _pageSize = 10;
-    private readonly AppDbContext _db;
-    private readonly CategoryService _categoryService;
-    public ProductController(AppDbContext db, CategoryService categoryService)
-    {
-        _db = db;
-        _categoryService = categoryService;
-    }
-    public class UpdateItemRequest
-    {
-        public required JsonPatchDocument<ProductPatchDTO> PatchItem { get; set; }
-        public List<int>? Categories { get; set; } = [];
-    }
 
-    private static async Task<ImageUpload> SaveImageToWebp(IFormFile file, Guid userId)
-    {
-        Size finalSize = new(0, 0);
-        var dirPath = Path.Combine("Uploads", "Products");
-        Directory.CreateDirectory(dirPath);
-        var thumbPath = Path.Combine("Uploads", "Thumbnails", "Products");
-        Directory.CreateDirectory(thumbPath);
-
-        var fileGuid = Guid.NewGuid();
-        var fileName = $"{fileGuid}.webp";
-        var filePath = Path.Combine(dirPath, fileName);
-        var fileThumbPath = Path.Combine(thumbPath, fileName);
-
-        using (var image = await Image.LoadAsync(file.OpenReadStream()))
+        using (var stream = file.OpenReadStream())
         {
-            image.Mutate(x => x.AutoOrient());
+          if (!stream.IsImage())
+          {
+            return BadRequest("Only image files are allowed.");
+          }
 
-            if (image.Width > 1920 || image.Height > 1920)
-            {
-                image.Mutate(x => x.Resize(new ResizeOptions
-                {
-                    Size = new Size(1920, 1920),
-                    Mode = ResizeMode.Max
-                }));
-            }
+          var fileType = FileTypeValidator.GetFileType(stream);
 
-            image.Metadata.ExifProfile = null;
+          if (!allowedExtensions.Contains(fileType.Name))
+          {
+            return BadRequest($"Invalid image type for file {file.FileName}.");
+          }
 
-            var thumbClone = image.Clone(x => x.Resize(new ResizeOptions
-            {
-                Size = new Size(256, 256),
-                Mode = ResizeMode.Max
-            }));
-
-            var encoder = new WebpEncoder
-            {
-                Quality = 85,
-                FileFormat = WebpFileFormatType.Lossy
-            };
-
-            finalSize = new Size(image.Width, image.Height);
-
-            await image.SaveAsync(filePath, encoder);
-            await thumbClone.SaveAsync(fileThumbPath, encoder);
+          file.OpenReadStream().Position = 0;
         }
+      }
 
-        return new ImageUpload
-        {
-            Id = fileGuid,
-            Width = finalSize.Width,
-            Height = finalSize.Height,
-            Url = fileName,
-            ThumbnailUrl = fileName,
-            UploaderId = userId
-        };
+      var dirPath = Path.Combine("Uploads", "Products");
+      Directory.CreateDirectory(dirPath);
+      var thumbPath = Path.Combine("Uploads", "Thumbnails", "Products");
+      Directory.CreateDirectory(thumbPath);
+
+      foreach (var file in product.Files)
+      {
+        var fileObj = await SaveImageToWebp(file, user.Id);
+        fileListObj.Add(fileObj);
+      }
     }
 
-    [HttpGet("page")]
-    [ProducesResponseType<PageFetchResult>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> FetchPage([FromQuery] PageFetchFilter filter)
+    var categoryIds = await _categoryService.ProcessCategoryFromList(product.Categories);
+
+    var prod = new Product
     {
-        var totalCount = await _db.Products.CountAsync();
-        var totalPages = MathF.Ceiling((float)totalCount / (float)_pageSize);
-        var query = _db.Products
-            .Include(x => x.ProductImages)
-                .ThenInclude(pi => pi.ImageUpload)
-            .AsQueryable();
+      Name = product.Name,
+      Price = product.Price,
+      Description = product.Description,
+      UserId = user.Id,
+      User = user,
+    };
 
-        if (filter.UserId != null)
+    if (fileListObj.Count != 0)
+    {
+      var piList = new List<ProductImage>();
+
+      foreach (var fo in fileListObj)
+      {
+        piList.Add(new ProductImage
         {
-            query = query
-                .Where(p => p.UserId == filter.UserId);
-        }
+          ProductId = prod.Id,
+          ImageUploadId = fo.Id
+        });
+      }
 
-        if (filter.Category != null)
-        {
-            query = query
-                .Include(p => p.ProductCategories)
-                    .ThenInclude(pc => pc.Category)
-                .Where(p => p.ProductCategories
-                    .Any(pc => pc.CategoryId == filter.Category));
-        }
+      prod.ProductImages = piList;
+    }
 
-        query = query
-            .OrderBy(x => x.CreationDate)
-            .Skip((filter.Offset - 1) * _pageSize)
-            .Take(_pageSize);
+    if (categoryIds != null)
+    {
+      var catList = new List<ProductCategory>();
+      foreach (var id in categoryIds)
+      {
+        catList.Add(new ProductCategory { CategoryId = id });
+      }
+      prod.ProductCategories = catList;
+    }
 
-        var result = await query
-            .Select(x => new
-            {
-                Product = new ProductListItemDTO(x),
-                CommentCount = x.Comments.Count()
-            })
+    _db.Products.Add(prod);
+
+    await _db.SaveChangesAsync();
+
+    return CreatedAtAction(nameof(FetchPage), new { prod.Id }, new { prod.Id });
+  }
+
+  [Authorize]
+  [HttpDelete("{id}")]
+  public async Task<IActionResult> DeleteItem(Guid id)
+  {
+    // TODO: Remove categories as well
+    var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)!;
+    var user = await _db.Users.Where(u => u.Id.ToString() == userId).SingleOrDefaultAsync();
+    if (user == null || user.IsVerified == false)
+    {
+      return Unauthorized();
+    }
+
+    var productToRemove = await _db.Products.Where(p => p.Id == id).SingleOrDefaultAsync();
+
+    if (productToRemove == null)
+    {
+      return NotFound();
+    }
+
+    _db.Products.Remove(productToRemove);
+
+    await _db.SaveChangesAsync();
+
+    return NoContent();
+  }
+
+  [Authorize]
+  [HttpPatch("{Id:guid}")]
+  public async Task<IActionResult> UpdateItem(Guid Id, [FromBody] JsonPatchDocument<ProductPatchDTO> request)
+  {
+    var patchItem = request;
+
+    if (patchItem == null)
+    {
+      return BadRequest();
+    }
+
+    var productToPatch = await _db.Products.Where(p => p.Id == Id).SingleOrDefaultAsync();
+
+    if (productToPatch == null)
+      return NotFound();
+
+    var dto = new ProductPatchDTO(productToPatch);
+
+    var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)!;
+
+    if (productToPatch.UserId.ToString() != userId)
+      return Unauthorized();
+
+    patchItem.ApplyTo(dto);
+
+    var categories = dto.Categories;
+
+    if (!ModelState.IsValid)
+      return BadRequest();
+
+    var categoryIds = await _categoryService.ProcessCategoryFromList(categories);
+
+    var currentCategories = (categories != null) ? (await _db.ProductCategories
+        .Where(pc => pc.ProductId == productToPatch.Id)
+        .Select(pc => pc.CategoryId)
+        .ToListAsync()) : null;
+
+    if (currentCategories != null && categories != null)
+    {
+      var toAdd = categories.Except(currentCategories).ToList();
+      var toRemove = currentCategories.Except(categories).ToList();
+
+      if (toRemove.Count != 0)
+      {
+        var categoriesToRemove = await _db.ProductCategories
+            .Where(pc => pc.ProductId == productToPatch.Id && toRemove.Contains(pc.CategoryId))
             .ToListAsync();
-        return Ok(new { items = result, totalPages });
+
+        _db.ProductCategories.RemoveRange(categoriesToRemove);
+      }
+
+      if (toAdd.Count != 0)
+      {
+        var newCategories = toAdd.Select(categoryId => new ProductCategory
+        {
+          ProductId = productToPatch.Id,
+          CategoryId = categoryId
+        });
+
+        _db.ProductCategories.AddRange(newCategories);
+      }
     }
 
-    [HttpGet("item/{id:guid}")]
-    [ProducesResponseType<ProductDTO>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> FetchItem(Guid id)
+    if (dto.Name != null) productToPatch.Name = dto.Name;
+    if (dto.Price.HasValue) productToPatch.Price = dto.Price.Value;
+    if (dto.Discount.HasValue) productToPatch.Discount = dto.Discount.Value;
+    if (dto.Description != null) productToPatch.Description = dto.Description;
+
+    await _db.SaveChangesAsync();
+
+    return Ok(dto);
+  }
+
+  private async Task<ImageUpload?> GetImageUploadData(Guid id)
+  {
+    var fileName = id.ToString();
+
+    var imageData = await _db.ImageUploads
+        .Where(x => x.Id == id)
+        .SingleOrDefaultAsync();
+
+    return imageData;
+  }
+
+  [HttpGet("image/{imageId:guid}")]
+  [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK, "image/webp")]
+  [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/json")]
+  public async Task<IActionResult> GetImageById(Guid imageId)
+  {
+    var imageData = await GetImageUploadData(imageId);
+
+    if (imageData == null)
+      return NotFound();
+
+    var filePath = Path.Combine("Uploads", "Products", imageData.Url);
+
+    if (!System.IO.File.Exists(filePath))
+      return NotFound();
+
+    var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+    return File(fileStream, "image/webp");
+  }
+
+  [Authorize]
+  [HttpPatch("item/{productId:guid}/image")]
+  public async Task<IActionResult> PatchProductImages(Guid productId, [FromForm] ImagePatchRequest request)
+  {
+    const int MAX_FILES = 7;
+    const long maxFileSize = 5 * 1024 * 1024; // 5 MB
+    var allowedExtensions = new[] { "PNG", "JPEG", "JPG", "WEBP" };
+
+    var imageIds = request.Remove;
+    var files = request.Uploads;
+
+    if (imageIds == null && files == null)
+      return BadRequest();
+    else if (
+        (imageIds == null && files != null && files.Count == 0) |
+        (files == null && imageIds != null && imageIds.Count == 0))
+      return BadRequest();
+
+    if (files != null)
     {
-        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)!;
-        var isLoggedIn = Guid.TryParse(userId, out var userGuid);
+      foreach (var file in files)
+      {
+        if (file.Length > maxFileSize)
+          return BadRequest($"File {file.FileName} exceeds maximum allowed size of 5MB.");
 
-        var query = _db.Products
-            .Where(x => x.Id == id)
-            .Include(x => x.User)
-            .Include(x => x.ProductCategories)
-                .ThenInclude(x => x.Category)
-            .Include(x => x.ProductImages)
-                .ThenInclude(pi => pi.ImageUpload)
-            .AsQueryable();
-
-        if (isLoggedIn)
+        using (var stream = file.OpenReadStream())
         {
-            query = query
-                .Include(x => x.CartItems
-                    .Where(ci => ci.UserId == userGuid));
-        }
+          if (!stream.IsImage())
+            return BadRequest("Only image files are allowed.");
 
-        var item = await query
-            .SingleOrDefaultAsync();
+          var fileType = FileTypeValidator.GetFileType(stream);
 
-        if (item == null)
-        {
-            return NotFound();
-        }
-        else
-        {
-            var itemDto = new ProductDTO(item)
-                .WithUser(item.User);
+          if (!allowedExtensions.Contains(fileType.Name))
+            return BadRequest($"Invalid image type for file {file.FileName}.");
 
-            if (item.CartItems != null && item.CartItems.Count != 0)
-            {
-                itemDto.IsInCart = true;
-            }
-            return Ok(itemDto);
+          file.OpenReadStream().Position = 0;
         }
+      }
     }
 
-    [Authorize]
-    [HttpPost]
-    public async Task<IActionResult> NewItem([FromForm] NewProductRequest product)
+    var productData = await _db.Products
+        .Where(x => x.Id == productId)
+        .Include(x => x.ProductImages)
+            .ThenInclude(pi => pi.ImageUpload)
+        .SingleOrDefaultAsync();
+
+    if (productData == null)
+      return NotFound();
+
+    if (files != null && productData.ProductImages.Count + files.Count > MAX_FILES)
+      return BadRequest();
+
+    var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)!;
+    if (!Guid.TryParse(userId, out var userGuid))
+      return Unauthorized();
+
+    if (userGuid != productData.UserId)
+      return Unauthorized();
+
+    var imageList = productData.ProductImages;
+
+    // Removing requested images
+    if (imageIds != null)
     {
-        const int MAX_FILES = 7;
-        const long maxFileSize = 5 * 1024 * 1024; // 5 MB
-        var allowedExtensions = new[] { "PNG", "JPEG", "JPG", "WEBP" };
+      var piToDelete = imageList.Where(x => imageIds.Contains(x.ImageUploadId)).ToList();
+      var imagesToDelete = piToDelete.Select(x => x.ImageUpload).ToList();
 
-        if (product.Files != null && product.Files.Count > MAX_FILES)
-            return BadRequest();
+      var dirPath = Path.Combine("Uploads", "Products");
+      Directory.CreateDirectory(dirPath);
+      var thumbPath = Path.Combine("Uploads", "Thumbnails", "Products");
+      Directory.CreateDirectory(thumbPath);
 
-        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (!Guid.TryParse(userId, out var userGuid))
+      foreach (var img in imagesToDelete)
+      {
+        var imgId = img.Id.ToString() + ".webp";
+        var filePath = Path.Combine(dirPath, imgId);
+        var thumbFile = Path.Combine(thumbPath, imgId);
+
+        if (Path.Exists(filePath))
         {
-            return Unauthorized();
-        }
-        var user = await _db.Users.Where(u => u.Id == userGuid).SingleOrDefaultAsync();
-        if (user == null || user.IsVerified == false)
-        {
-
-            return Unauthorized();
-        }
-
-        var fileListObj = new List<ImageUpload>();
-
-        if (product.Files != null && product.Files.Count != 0)
-        {
-            foreach (var file in product.Files)
-            {
-                if (file.Length > maxFileSize)
-                {
-                    return BadRequest($"File {file.FileName} exceeds maximum allowed size of 5MB.");
-                }
-
-                using (var stream = file.OpenReadStream())
-                {
-                    if (!stream.IsImage())
-                    {
-                        return BadRequest("Only image files are allowed.");
-                    }
-
-                    var fileType = FileTypeValidator.GetFileType(stream);
-
-                    if (!allowedExtensions.Contains(fileType.Name))
-                    {
-                        return BadRequest($"Invalid image type for file {file.FileName}.");
-                    }
-
-                    file.OpenReadStream().Position = 0;
-                }
-            }
-
-            var dirPath = Path.Combine("Uploads", "Products");
-            Directory.CreateDirectory(dirPath);
-            var thumbPath = Path.Combine("Uploads", "Thumbnails", "Products");
-            Directory.CreateDirectory(thumbPath);
-
-            foreach (var file in product.Files)
-            {
-                var fileObj = await SaveImageToWebp(file, user.Id);
-                fileListObj.Add(fileObj);
-            }
+          System.IO.File.Delete(filePath);
         }
 
-        var categoryIds = await _categoryService.ProcessCategoryFromList(product.Categories);
-
-        var prod = new Product
+        if (Path.Exists(thumbFile))
         {
-            Name = product.Name,
-            Price = product.Price,
-            Description = product.Description,
-            UserId = user.Id,
-            User = user,
-        };
-
-        if (fileListObj.Count != 0)
-        {
-            var piList = new List<ProductImage>();
-
-            foreach (var fo in fileListObj)
-            {
-                piList.Add(new ProductImage
-                {
-                    ProductId = prod.Id,
-                    ImageUploadId = fo.Id
-                });
-            }
-
-            prod.ProductImages = piList;
+          System.IO.File.Delete(thumbFile);
         }
+      }
 
-        if (categoryIds != null)
-        {
-            var catList = new List<ProductCategory>();
-            foreach (var id in categoryIds)
-            {
-                catList.Add(new ProductCategory { CategoryId = id });
-            }
-            prod.ProductCategories = catList;
-        }
+      _db.ImageUploads.RemoveRange(imagesToDelete);
+      _db.ProductImages.RemoveRange(piToDelete);
 
-        _db.Products.Add(prod);
-
-        await _db.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(FetchPage), new { prod.Id }, new { prod.Id });
+      await _db.SaveChangesAsync();
     }
 
-    [Authorize]
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteItem(Guid id)
+    // Adding new images
+    if (files != null)
     {
-        // TODO: Remove categories as well
-        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)!;
-        var user = await _db.Users.Where(u => u.Id.ToString() == userId).SingleOrDefaultAsync();
-        if (user == null || user.IsVerified == false)
+      foreach (var file in files)
+      {
+        var imgEntity = await SaveImageToWebp(file, userGuid);
+        _db.ImageUploads.Add(imgEntity);
+        productData.ProductImages.Add(new ProductImage
         {
-            return Unauthorized();
-        }
-
-        var productToRemove = await _db.Products.Where(p => p.Id == id).SingleOrDefaultAsync();
-
-        if (productToRemove == null)
-        {
-            return NotFound();
-        }
-
-        _db.Products.Remove(productToRemove);
-
-        await _db.SaveChangesAsync();
-
-        return NoContent();
+          ProductId = productData.Id,
+          ImageUploadId = imgEntity.Id,
+        });
+      }
     }
 
-    [Authorize]
-    [HttpPatch("{Id:guid}")]
-    public async Task<IActionResult> UpdateItem(Guid Id, [FromBody] JsonPatchDocument<ProductPatchDTO> request)
-    {
-        var patchItem = request;
+    await _db.SaveChangesAsync();
 
-        if (patchItem == null)
-        {
-            return BadRequest();
-        }
+    return Ok();
+  }
 
-        var productToPatch = await _db.Products.Where(p => p.Id == Id).SingleOrDefaultAsync();
+  [HttpGet("thumbnail/{thumbId:guid}")]
+  [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK, "image/webp")]
+  [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/json")]
+  public async Task<IActionResult> GetThumbnailById(Guid thumbId)
+  {
+    var imageData = await GetImageUploadData(thumbId);
 
-        if (productToPatch == null)
-            return NotFound();
+    if (imageData == null || imageData.ThumbnailUrl == null)
+      return NotFound();
 
-        var dto = new ProductPatchDTO(productToPatch);
+    var filePath = Path.Combine("Uploads", "Thumbnails", "Products", imageData.ThumbnailUrl);
 
-        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)!;
+    if (filePath == null)
+      return NotFound();
 
-        if (productToPatch.UserId.ToString() != userId)
-            return Unauthorized();
+    if (!System.IO.File.Exists(filePath))
+      return NotFound();
 
-        patchItem.ApplyTo(dto, ModelState);
-
-        var categories = dto.Categories;
-
-        if (!ModelState.IsValid)
-            return BadRequest();
-
-        var categoryIds = await _categoryService.ProcessCategoryFromList(categories);
-
-        var currentCategories = (categories != null) ? (await _db.ProductCategories
-            .Where(pc => pc.ProductId == productToPatch.Id)
-            .Select(pc => pc.CategoryId)
-            .ToListAsync()) : null;
-
-        if (currentCategories != null && categories != null)
-        {
-            var toAdd = categories.Except(currentCategories).ToList();
-            var toRemove = currentCategories.Except(categories).ToList();
-
-            if (toRemove.Count != 0)
-            {
-                var categoriesToRemove = await _db.ProductCategories
-                    .Where(pc => pc.ProductId == productToPatch.Id && toRemove.Contains(pc.CategoryId))
-                    .ToListAsync();
-
-                _db.ProductCategories.RemoveRange(categoriesToRemove);
-            }
-
-            if (toAdd.Count != 0)
-            {
-                var newCategories = toAdd.Select(categoryId => new ProductCategory
-                {
-                    ProductId = productToPatch.Id,
-                    CategoryId = categoryId
-                });
-
-                _db.ProductCategories.AddRange(newCategories);
-            }
-        }
-
-        if (dto.Name != null) productToPatch.Name = dto.Name;
-        if (dto.Price.HasValue) productToPatch.Price = dto.Price.Value;
-        if (dto.Discount.HasValue) productToPatch.Discount = dto.Discount.Value;
-        if (dto.Description != null) productToPatch.Description = dto.Description;
-
-        await _db.SaveChangesAsync();
-
-        return Ok(dto);
-    }
-
-    private async Task<ImageUpload?> GetImageUploadData(Guid id)
-    {
-        var fileName = id.ToString();
-
-        var imageData = await _db.ImageUploads
-            .Where(x => x.Id == id)
-            .SingleOrDefaultAsync();
-
-        return imageData;
-    }
-
-    [HttpGet("image/{imageId:guid}")]
-    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK, "image/webp")]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/json")]
-    public async Task<IActionResult> GetImageById(Guid imageId)
-    {
-        var imageData = await GetImageUploadData(imageId);
-
-        if (imageData == null)
-            return NotFound();
-
-        var filePath = Path.Combine("Uploads", "Products", imageData.Url);
-
-        if (!System.IO.File.Exists(filePath))
-            return NotFound();
-
-        var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-        return File(fileStream, "image/webp");
-    }
-
-    [Authorize]
-    [HttpPatch("item/{productId:guid}/image")]
-    public async Task<IActionResult> PatchProductImages(Guid productId, [FromForm] ImagePatchRequest request)
-    {
-        const int MAX_FILES = 7;
-        const long maxFileSize = 5 * 1024 * 1024; // 5 MB
-        var allowedExtensions = new[] { "PNG", "JPEG", "JPG", "WEBP" };
-
-        var imageIds = request.Remove;
-        var files = request.Uploads;
-
-        if (imageIds == null && files == null)
-            return BadRequest();
-        else if (
-            (imageIds == null && files != null && files.Count == 0) |
-            (files == null && imageIds != null && imageIds.Count == 0))
-            return BadRequest();
-
-        if (files != null)
-        {
-            foreach (var file in files)
-            {
-                if (file.Length > maxFileSize)
-                    return BadRequest($"File {file.FileName} exceeds maximum allowed size of 5MB.");
-
-                using (var stream = file.OpenReadStream())
-                {
-                    if (!stream.IsImage())
-                        return BadRequest("Only image files are allowed.");
-
-                    var fileType = FileTypeValidator.GetFileType(stream);
-
-                    if (!allowedExtensions.Contains(fileType.Name))
-                        return BadRequest($"Invalid image type for file {file.FileName}.");
-
-                    file.OpenReadStream().Position = 0;
-                }
-            }
-        }
-
-        var productData = await _db.Products
-            .Where(x => x.Id == productId)
-            .Include(x => x.ProductImages)
-                .ThenInclude(pi => pi.ImageUpload)
-            .SingleOrDefaultAsync();
-
-        if (productData == null)
-            return NotFound();
-
-        if (files != null && productData.ProductImages.Count + files.Count > MAX_FILES)
-            return BadRequest();
-
-        var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub)!;
-        if (!Guid.TryParse(userId, out var userGuid))
-            return Unauthorized();
-
-        if (userGuid != productData.UserId)
-            return Unauthorized();
-
-        var imageList = productData.ProductImages;
-
-        // Removing requested images
-        if (imageIds != null)
-        {
-            var piToDelete = imageList.Where(x => imageIds.Contains(x.ImageUploadId)).ToList();
-            var imagesToDelete = piToDelete.Select(x => x.ImageUpload).ToList();
-
-            var dirPath = Path.Combine("Uploads", "Products");
-            Directory.CreateDirectory(dirPath);
-            var thumbPath = Path.Combine("Uploads", "Thumbnails", "Products");
-            Directory.CreateDirectory(thumbPath);
-
-            foreach (var img in imagesToDelete)
-            {
-                var imgId = img.Id.ToString() + ".webp";
-                var filePath = Path.Combine(dirPath, imgId);
-                var thumbFile = Path.Combine(thumbPath, imgId);
-
-                if (Path.Exists(filePath))
-                {
-                    System.IO.File.Delete(filePath);
-                }
-
-                if (Path.Exists(thumbFile))
-                {
-                    System.IO.File.Delete(thumbFile);
-                }
-            }
-
-            _db.ImageUploads.RemoveRange(imagesToDelete);
-            _db.ProductImages.RemoveRange(piToDelete);
-
-            await _db.SaveChangesAsync();
-        }
-
-        // Adding new images
-        if (files != null)
-        {
-            foreach (var file in files)
-            {
-                var imgEntity = await SaveImageToWebp(file, userGuid);
-                _db.ImageUploads.Add(imgEntity);
-                productData.ProductImages.Add(new ProductImage
-                {
-                    ProductId = productData.Id,
-                    ImageUploadId = imgEntity.Id,
-                });
-            }
-        }
-
-        await _db.SaveChangesAsync();
-
-        return Ok();
-    }
-
-    [HttpGet("thumbnail/{thumbId:guid}")]
-    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK, "image/webp")]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound, "application/json")]
-    public async Task<IActionResult> GetThumbnailById(Guid thumbId)
-    {
-        var imageData = await GetImageUploadData(thumbId);
-
-        if (imageData == null || imageData.ThumbnailUrl == null)
-            return NotFound();
-
-        var filePath = Path.Combine("Uploads", "Thumbnails", "Products", imageData.ThumbnailUrl);
-
-        if (filePath == null)
-            return NotFound();
-
-        if (!System.IO.File.Exists(filePath))
-            return NotFound();
-
-        var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-        return File(fileStream, "image/webp");
-    }
+    var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+    return File(fileStream, "image/webp");
+  }
 }

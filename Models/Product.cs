@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 
@@ -86,15 +87,19 @@ public class ProductListItemDTO
 
 public class ProductDTO
 {
+  [Required]
   public Guid Id { get; set; }
+  [Required]
   public DateTimeOffset CreationDate { get; set; }
+  [Required]
   public string Name { get; set; } = default!;
+  [Required]
   public float Price { get; set; }
   public float? Discount { get; set; }
   public string? Description { get; set; }
-  public ProductRating Rating { get; set; } = null!;
+  public ProductRating Rating { get; set; } = default!;
   public List<string> Tags { get; set; } = [];
-  public ProductMetadata Metadata { get; set; } = null!;
+  public ProductMetadata Metadata { get; set; } = default!;
   public bool? IsInCart { get; set; }
   public bool IsInStock { get; set; }
   public int? StockAmount { get; set; }
