@@ -29,6 +29,7 @@ public class AppDbContext : DbContext
 
   protected override void OnModelCreating(ModelBuilder modelBuilder)
   {
+    modelBuilder.HasPostgresExtension("fuzzystrmatch");
     modelBuilder.Entity<User>(entity =>
     {
       entity.HasKey(e => e.Id);

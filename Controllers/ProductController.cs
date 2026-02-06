@@ -206,6 +206,55 @@ public class ProductController : ControllerBase
     }
   }
 
+  public class ProductQueryParams
+  {
+    [Range(0, int.MaxValue)]
+    public int Offset { get; set; } = 1;
+    public string? Name { get; set; }
+  }
+
+  public class ProductQueryResponse
+  {
+    public required int TotalPages { get; set; }
+    public required List<ProductListItemDTO> Items { get; set; }
+  }
+
+  [HttpGet("search")]
+  [ProducesResponseType<List<ProductDTO>>(StatusCodes.Status200OK)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
+  public async Task<IActionResult> FetchProductQuery([FromQuery] ProductQueryParams queryParams)
+  {
+    const int PAGESIZE = 10; // TODO: Move to global server configs file
+    var query = _db.Products
+      .Include(x => x.ProductImages)
+        .ThenInclude(x => x.ImageUpload)
+      .AsQueryable();
+
+    if (queryParams.Name != null)
+    {
+      query = query
+        .Where(x => EF.Functions.FuzzyStringMatchLevenshteinLessEqual(x.Name, queryParams.Name, 2) < 2);
+    }
+
+    if (queryParams.Offset > 1)
+    {
+      query = query
+        .Skip(queryParams.Offset * PAGESIZE);
+    }
+
+    var totalCount = await query.CountAsync();
+
+    var result = await query
+      .Take(PAGESIZE)
+      .Select(x => new ProductListItemDTO(x))
+      .ToListAsync();
+
+    if (result == null || result.Count == 0)
+      return NotFound();
+
+    return Ok(result);
+  }
+
   [Authorize]
   [HttpPost]
   public async Task<IActionResult> NewItem([FromForm] NewProductRequest product)
